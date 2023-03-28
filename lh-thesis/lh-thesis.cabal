@@ -1,0 +1,28 @@
+cabal-version: 1.12
+
+
+name:           lh-thesis
+version:        0.1.0.0
+description:    Please see the README of this project
+homepage:       
+bug-reports:    
+author:         Jamie Hochrainer
+maintainer:     jamie.hochrainer@student.uibk.ac.at
+copyright:      2023 Jamie Hochrainer
+license:        BSD3
+license-file:   LICENSE
+build-type:     Simple
+
+library
+  exposed-modules:
+      PopPush
+  hs-source-dirs:
+      src
+  ghc-options: -fplugin=LiquidHaskell
+  build-depends:
+      liquid-ghc-prim,
+      liquid-base,
+      liquid-prelude,
+      liquid-containers,
+      liquidhaskell
+  default-language: Haskell2010
