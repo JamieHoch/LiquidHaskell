@@ -1,0 +1,885 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<html>
+<head>
+<title>/home/jamie/Documents/Master/MasterThesis/master-thesis-project/lh-thesis/src/Binomial.hs</title>
+</head>
+<head>
+<link type='text/css' rel='stylesheet' href='liquid.css' />
+</head>
+
+<body>
+<hr>
+Put mouse over identifiers to see inferred types
+<pre><span class=hs-linenum>  1: </span><a class=annot href="#"><span class=annottext>GHC.Types.Module</span><span class='hs-keyword'>{-@</span></a> <span class='hs-conid'>LIQUID</span> <span class='hs-str'>"--bscope"</span> <span class='hs-keyword'>@-}</span>
+<span class=hs-linenum>  2: </span><span class='hs-comment'>-- Automatically generate singleton types for data constructors</span>
+<span class=hs-linenum>  3: </span><span class='hs-keyword'>{-@</span> <span class='hs-conid'>LIQUID</span> <span class='hs-str'>"--exactdc"</span> <span class='hs-keyword'>@-}</span>
+<span class=hs-linenum>  4: </span><span class='hs-comment'>-- Disable ADTs (only used with exactDC)</span>
+<span class=hs-linenum>  5: </span><span class='hs-keyword'>{-@</span> <span class='hs-conid'>LIQUID</span> <span class='hs-str'>"--no-adt"</span> <span class='hs-keyword'>@-}</span>
+<span class=hs-linenum>  6: </span>
+<span class=hs-linenum>  7: </span><span class='hs-keyword'>module</span> <span class='hs-conid'>Binomial</span> <span class='hs-keyword'>where</span>
+<span class=hs-linenum>  8: </span>
+<span class=hs-linenum>  9: </span><span class='hs-keyword'>import</span> <span class='hs-keyword'>qualified</span> <span class='hs-conid'>Language.Haskell.Liquid.Bag</span> <span class='hs-keyword'>as</span> <span class='hs-conid'>Bag</span>
+<span class=hs-linenum> 10: </span><span class='hs-keyword'>import</span> <span class='hs-conid'>Language.Haskell.Liquid.Bag</span> <span class='hs-layout'>(</span><span class='hs-conid'>Bag</span><span class='hs-layout'>)</span>
+<span class=hs-linenum> 11: </span>
+<span class=hs-linenum> 12: </span><span class='hs-keyword'>{-@</span> <span class='hs-varid'>inline</span> <span class='hs-varid'>assert</span> <span class='hs-keyword'>@-}</span>
+<span class=hs-linenum> 13: </span><span class='hs-keyword'>{-@</span> <span class='hs-varid'>assert</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>TT</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-varid'>a</span> <span class='hs-keyword'>@-}</span>
+<span class=hs-linenum> 14: </span><span class='hs-definition'>assert</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Bool</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-varid'>a</span>
+<span class=hs-linenum> 15: </span><a class=annot href="#"><span class=annottext>forall a .
+{VV : GHC.Types.Bool | VV} -&gt; x2:a -&gt; {VV : a | VV == x2}</span><span class='hs-definition'>assert</span></a> <span class='hs-keyword'>_</span> <a class=annot href="#"><span class=annottext>a</span><span class='hs-varid'>a</span></a> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>a</span>
+<span class=hs-linenum> 16: </span>
+<span class=hs-linenum> 17: </span><span class='hs-keyword'>{-@</span> <span class='hs-keyword'>type</span> <span class='hs-conid'>Pos</span> <span class='hs-keyglyph'>=</span> <span class='hs-layout'>{</span><span class='hs-varid'>n</span><span class='hs-conop'>:</span><span class='hs-conid'>Int</span> <span class='hs-keyglyph'>|</span> <span class='hs-varid'>n</span> <span class='hs-varop'>&gt;=</span> <span class='hs-num'>1</span><span class='hs-layout'>}</span> <span class='hs-keyword'>@-}</span>
+<span class=hs-linenum> 18: </span><span class='hs-keyword'>{-@</span> <span class='hs-keyword'>type</span> <span class='hs-conid'>AtLeast</span> <span class='hs-varid'>a</span> <span class='hs-conid'>X</span> <span class='hs-keyglyph'>=</span> <span class='hs-layout'>{</span><span class='hs-varid'>n</span><span class='hs-conop'>:</span><span class='hs-varid'>a</span> <span class='hs-keyglyph'>|</span> <span class='hs-conid'>X</span> <span class='hs-varop'>&lt;=</span> <span class='hs-varid'>n</span><span class='hs-layout'>}</span> <span class='hs-keyword'>@-}</span>
+<span class=hs-linenum> 19: </span><span class='hs-keyword'>{-@</span> <span class='hs-keyword'>type</span> <span class='hs-conid'>AtLeastTree</span> <span class='hs-varid'>a</span> <span class='hs-conid'>X</span> <span class='hs-keyglyph'>=</span> <span class='hs-conid'>Tree</span> <span class='hs-layout'>(</span><span class='hs-conid'>AtLeast</span> <span class='hs-varid'>a</span> <span class='hs-conid'>X</span><span class='hs-layout'>)</span> <span class='hs-keyword'>@-}</span>
+<span class=hs-linenum> 20: </span><span class='hs-keyword'>{-@</span> <span class='hs-keyword'>type</span> <span class='hs-conid'>NEList</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>=</span> <span class='hs-layout'>{</span><span class='hs-varid'>xs</span><span class='hs-conop'>:</span><span class='hs-keyglyph'>[</span><span class='hs-varid'>a</span><span class='hs-keyglyph'>]</span> <span class='hs-keyglyph'>|</span> <span class='hs-num'>0</span> <span class='hs-varop'>&lt;</span> <span class='hs-varid'>len</span> <span class='hs-varid'>xs</span><span class='hs-layout'>}</span> <span class='hs-keyword'>@-}</span>
+<span class=hs-linenum> 21: </span><span class='hs-keyword'>{-@</span> <span class='hs-keyword'>type</span> <span class='hs-conid'>NEHeap</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>=</span> <span class='hs-layout'>{</span><span class='hs-varid'>h</span><span class='hs-conop'>:</span><span class='hs-conid'>Heap</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>|</span> <span class='hs-num'>0</span> <span class='hs-varop'>&lt;</span> <span class='hs-varid'>len</span> <span class='hs-layout'>(</span><span class='hs-varid'>unheap</span> <span class='hs-varid'>h</span><span class='hs-layout'>)</span><span class='hs-layout'>}</span> <span class='hs-keyword'>@-}</span>
+<span class=hs-linenum> 22: </span><span class='hs-keyword'>{-@</span> <span class='hs-keyword'>type</span> <span class='hs-conid'>IncrList</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>=</span> <span class='hs-keyglyph'>[</span><span class='hs-varid'>a</span><span class='hs-keyglyph'>]</span><span class='hs-varop'>&lt;</span><span class='hs-layout'>{</span><span class='hs-keyglyph'>\</span><span class='hs-varid'>xi</span> <span class='hs-varid'>xj</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-varid'>xi</span> <span class='hs-varop'>&lt;=</span> <span class='hs-varid'>xj</span><span class='hs-layout'>}</span><span class='hs-varop'>&gt;</span> <span class='hs-keyword'>@-}</span>
+<span class=hs-linenum> 23: </span>
+<span class=hs-linenum> 24: </span><span class='hs-keyword'>{-@</span> <span class='hs-varid'>measure</span> <span class='hs-varid'>treeRank</span> <span class='hs-keyword'>@-}</span>
+<span class=hs-linenum> 25: </span><span class='hs-keyword'>{-@</span> <span class='hs-varid'>treeRank</span> <span class='hs-keyglyph'>::</span> <span class='hs-varid'>t</span><span class='hs-conop'>:</span><span class='hs-layout'>(</span><span class='hs-conid'>Tree</span> <span class='hs-varid'>a</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-keyword'>{n:</span><span class='hs-conid'>Nat</span> <span class='hs-keyword'>| n = rank t}</span> <span class='hs-keyword'>@-}</span>
+<span class=hs-linenum> 26: </span><a class=annot href="#"><span class=annottext>forall a .
+x1:(Binomial.Tree a) -&gt; {VV : GHC.Types.Int | VV == rank x1
+                                              &amp;&amp; VV == treeRank x1
+                                              &amp;&amp; VV &gt;= 0}</span><span class='hs-definition'>treeRank</span></a> <span class='hs-layout'>(</span><span class='hs-conid'>Node</span> <span class='hs-keyword'>_</span> <span class='hs-varid'>r</span> <span class='hs-keyword'>_</span> <span class='hs-keyword'>_</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>{v : GHC.Types.Int | v == r
+                     &amp;&amp; v &gt;= 0}</span><span class='hs-varid'>r</span></a>
+<span class=hs-linenum> 27: </span>
+<span class=hs-linenum> 28: </span><span class='hs-keyword'>{-@</span> <span class='hs-varid'>measure</span> <span class='hs-varid'>treeListSize</span> <span class='hs-keyword'>@-}</span>
+<span class=hs-linenum> 29: </span><span class='hs-keyword'>{-@</span> <span class='hs-varid'>treeListSize</span> <span class='hs-keyglyph'>::</span> <span class='hs-varid'>xs</span><span class='hs-conop'>:</span><span class='hs-keyglyph'>[</span><span class='hs-conid'>Tree</span> <span class='hs-varid'>a</span><span class='hs-keyglyph'>]</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-keyword'>{v:</span><span class='hs-conid'>Nat</span> <span class='hs-keyword'>| (len xs &lt;= v) &amp;&amp; (v = 0 &lt;=&gt; len xs = 0)}</span> <span class='hs-keyword'>@-}</span>
+<span class=hs-linenum> 30: </span><span class='hs-definition'>treeListSize</span> <span class='hs-keyglyph'>::</span> <span class='hs-keyglyph'>[</span><span class='hs-conid'>Tree</span> <span class='hs-varid'>a</span><span class='hs-keyglyph'>]</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Int</span>
+<span class=hs-linenum> 31: </span><a class=annot href="#"><span class=annottext>forall a .
+x1:[(Binomial.Tree a)] -&gt; {VV : GHC.Types.Int | (VV == 0 &lt;=&gt; len x1 == 0)
+                                                &amp;&amp; VV == treeListSize x1
+                                                &amp;&amp; VV &gt;= 0
+                                                &amp;&amp; len x1 &lt;= VV}</span><span class='hs-definition'>treeListSize</span></a> <span class='hs-conid'>[]</span> <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>{v : GHC.Prim.Int# | v == 0}</span><span class='hs-num'>0</span></a>
+<span class=hs-linenum> 32: </span><span class='hs-definition'>treeListSize</span> <span class='hs-layout'>(</span><span class='hs-varid'>x</span><span class='hs-conop'>:</span><span class='hs-varid'>xs</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>{v : GHC.Types.Int | v == treeSize x
+                     &amp;&amp; v == 1 + treeListSize (subtrees x)
+                     &amp;&amp; v &gt;= 1}</span><span class='hs-varid'>treeSize</span></a> <a class=annot href="#"><span class=annottext>{v : (Binomial.Tree a) | v == x
+                         &amp;&amp; treeElts v == Map_store (treeListElts (subtrees v)) (root v) (1 + Map_select (treeListElts (subtrees v)) (root v))
+                         &amp;&amp; treeRank v == rank v
+                         &amp;&amp; treeRank v &gt;= 0}</span><span class='hs-varid'>x</span></a> <span class='hs-varop'>+</span> <a class=annot href="#"><span class=annottext>{v : GHC.Types.Int | (v == 0 &lt;=&gt; len xs == 0)
+                     &amp;&amp; v == treeListSize xs
+                     &amp;&amp; v &gt;= 0
+                     &amp;&amp; len xs &lt;= v}</span><span class='hs-varid'>treeListSize</span></a> <a class=annot href="#"><span class=annottext>{v : [(Binomial.Tree a)] | v == xs
+                           &amp;&amp; len v &gt;= 0}</span><span class='hs-varid'>xs</span></a>
+<span class=hs-linenum> 33: </span>
+<span class=hs-linenum> 34: </span><span class='hs-keyword'>{-@</span>
+<span class=hs-linenum> 35: </span><span class='hs-keyword'>data</span> <span class='hs-conid'>Tree</span> <span class='hs-keyglyph'>[</span><span class='hs-varid'>rank</span><span class='hs-keyglyph'>]</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>=</span>
+<span class=hs-linenum> 36: </span>    <span class='hs-conid'>Node</span>
+<span class=hs-linenum> 37: </span>        <span class='hs-layout'>{</span> <span class='hs-varid'>root</span> <span class='hs-keyglyph'>::</span> <span class='hs-varid'>a</span>
+<span class=hs-linenum> 38: </span>        <span class='hs-layout'>,</span> <span class='hs-varid'>rank</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Nat</span>
+<span class=hs-linenum> 39: </span>        <span class='hs-layout'>,</span> <span class='hs-varid'>subtrees</span> <span class='hs-keyglyph'>::</span> <span class='hs-layout'>{</span><span class='hs-varid'>ts</span><span class='hs-conop'>:</span><span class='hs-keyglyph'>[</span><span class='hs-layout'>{</span><span class='hs-varid'>t</span><span class='hs-conop'>:</span><span class='hs-conid'>AtLeastTree</span> <span class='hs-varid'>a</span> <span class='hs-varid'>root</span> <span class='hs-keyglyph'>|</span> <span class='hs-varid'>rank</span> <span class='hs-varop'>&gt;</span> <span class='hs-varid'>treeRank</span> <span class='hs-varid'>t</span><span class='hs-layout'>}</span><span class='hs-keyglyph'>]</span><span class='hs-varop'>&lt;</span><span class='hs-layout'>{</span><span class='hs-keyglyph'>\</span><span class='hs-varid'>ti</span> <span class='hs-varid'>tj</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-varid'>treeRank</span> <span class='hs-varid'>ti</span> <span class='hs-varop'>&gt;</span> <span class='hs-varid'>treeRank</span> <span class='hs-varid'>tj</span><span class='hs-layout'>}</span><span class='hs-varop'>&gt;</span> <span class='hs-keyglyph'>|</span> <span class='hs-varid'>len</span> <span class='hs-varid'>ts</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>rank</span><span class='hs-layout'>}</span>
+<span class=hs-linenum> 40: </span>        <span class='hs-layout'>,</span> <span class='hs-varid'>treeSize</span> <span class='hs-keyglyph'>::</span> <span class='hs-layout'>{</span><span class='hs-varid'>v</span><span class='hs-conop'>:</span><span class='hs-conid'>Pos</span> <span class='hs-keyglyph'>|</span> <span class='hs-varid'>v</span> <span class='hs-keyglyph'>=</span> <span class='hs-num'>1</span> <span class='hs-varop'>+</span> <span class='hs-varid'>treeListSize</span> <span class='hs-varid'>subtrees</span><span class='hs-layout'>}</span>
+<span class=hs-linenum> 41: </span>        <span class='hs-layout'>}</span>
+<span class=hs-linenum> 42: </span><span class='hs-keyword'>@-}</span>
+<span class=hs-linenum> 43: </span><span class='hs-keyword'>data</span> <span class='hs-conid'>Tree</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>=</span>
+<span class=hs-linenum> 44: </span>    <span class='hs-conid'>Node</span>
+<span class=hs-linenum> 45: </span>        <span class='hs-layout'>{</span> <span class='hs-varid'>root</span> <span class='hs-keyglyph'>::</span> <span class='hs-varid'>a</span>
+<span class=hs-linenum> 46: </span>        <span class='hs-layout'>,</span> <span class='hs-varid'>rank</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Int</span>
+<span class=hs-linenum> 47: </span>        <span class='hs-layout'>,</span> <span class='hs-varid'>subtrees</span> <span class='hs-keyglyph'>::</span> <span class='hs-keyglyph'>[</span><span class='hs-conid'>Tree</span> <span class='hs-varid'>a</span><span class='hs-keyglyph'>]</span>
+<span class=hs-linenum> 48: </span>        <span class='hs-layout'>,</span> <span class='hs-varid'>treeSize</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Int</span>
+<span class=hs-linenum> 49: </span>        <span class='hs-layout'>}</span>
+<span class=hs-linenum> 50: </span>
+<span class=hs-linenum> 51: </span><span class='hs-keyword'>{-@</span> <span class='hs-varid'>measure</span> <span class='hs-varid'>treeElts</span> <span class='hs-keyword'>@-}</span>
+<span class=hs-linenum> 52: </span><span class='hs-keyword'>{-@</span> <span class='hs-varid'>treeElts</span> <span class='hs-keyglyph'>::</span> <span class='hs-varid'>t</span><span class='hs-conop'>:</span><span class='hs-conid'>Tree</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-keyword'>{v:</span><span class='hs-conid'>Bag</span> <span class='hs-varid'>a</span> <span class='hs-keyword'>| v = Bag.put (root t) (treeListElts (subtrees t))}</span> <span class='hs-keyword'>@-}</span>
+<span class=hs-linenum> 53: </span><span class='hs-definition'>treeElts</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Ord</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>=&gt;</span> <span class='hs-conid'>Tree</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Bag</span> <span class='hs-varid'>a</span>
+<span class=hs-linenum> 54: </span><a class=annot href="#"><span class=annottext>forall a .
+(GHC.Classes.Ord&lt;[]&gt; a) =&gt;
+x2:(Binomial.Tree a) -&gt; {VV : (Data.Map.Internal.Map a GHC.Types.Int) | VV == treeElts x2
+                                                                        &amp;&amp; VV == Map_store (treeListElts (subtrees x2)) (root x2) (1 + Map_select (treeListElts (subtrees x2)) (root x2))}</span><span class='hs-definition'>treeElts</span></a> <span class='hs-layout'>(</span><span class='hs-conid'>Node</span> <span class='hs-varid'>x</span> <span class='hs-keyword'>_</span> <span class='hs-conid'>[]</span> <span class='hs-keyword'>_</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>{v : (Data.Map.Internal.Map a GHC.Types.Int) | v == Map_default 0}</span><span class='hs-conid'>Bag.put</span></a> <a class=annot href="#"><span class=annottext>{VV : a | VV == x}</span><span class='hs-varid'>x</span></a> <a class=annot href="#"><span class=annottext>{VV : forall a .
+      {v : (Data.Map.Internal.Map a GHC.Types.Int) | v == Map_default 0} | VV == empty}</span><span class='hs-conid'>Bag.empty</span></a>
+<span class=hs-linenum> 55: </span><span class='hs-definition'>treeElts</span> <span class='hs-layout'>(</span><span class='hs-conid'>Node</span> <span class='hs-varid'>x</span> <span class='hs-varid'>r</span> <span class='hs-varid'>tts</span><span class='hs-keyglyph'>@</span><span class='hs-layout'>(</span><span class='hs-keyword'>_</span><span class='hs-conop'>:</span><span class='hs-varid'>ts</span><span class='hs-layout'>)</span> <span class='hs-varid'>sz</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>=</span>
+<span class=hs-linenum> 56: </span>    <span class='hs-keyword'>let</span> <a class=annot href="#"><span class=annottext>(Binomial.Tree a)</span><span class='hs-varid'>t</span></a> <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>(Binomial.Tree a)</span><span class='hs-varid'>rankOfFirstTree</span></a> <a class=annot href="#"><span class=annottext>{v : [(Binomial.Tree {VV : a | x &lt;= VV})]&lt;\x5 VV -&gt; {v : (Binomial.Tree a) | treeRank v &gt; treeRank v}&gt; | (treeListSize v == 0 &lt;=&gt; len v == 0)
+                                                                                                         &amp;&amp; len v &gt;= 0
+                                                                                                         &amp;&amp; treeListSize v &gt;= 0
+                                                                                                         &amp;&amp; len v &lt;= treeListSize v}</span><span class='hs-varid'>tts</span></a> <span class='hs-keyword'>in</span>
+<span class=hs-linenum> 57: </span>    <a class=annot href="#"><span class=annottext>x1:(Data.Map.Internal.Map a GHC.Types.Int) -&gt; {v : (Data.Map.Internal.Map a GHC.Types.Int) | v == x1}</span><span class='hs-varid'>assert</span></a> <a class=annot href="#"><span class=annottext>GHC.Types.Bool</span><span class='hs-layout'>(</span></a><a class=annot href="#"><span class=annottext>{v : GHC.Types.Int | v == rank t
+                     &amp;&amp; v == treeRank t
+                     &amp;&amp; v &gt;= 0}</span><span class='hs-varid'>treeRank</span></a> <a class=annot href="#"><span class=annottext>{v : (Binomial.Tree a) | v == t
+                         &amp;&amp; treeRank v == rank v
+                         &amp;&amp; treeRank v &gt;= 0}</span><span class='hs-varid'>t</span></a> <span class='hs-varop'>==</span> <a class=annot href="#"><span class=annottext>{v : GHC.Types.Int | v &gt;= 0}</span><span class='hs-varid'>r</span></a> <span class='hs-comment'>-</span> <a class=annot href="#"><span class=annottext>GHC.Types.Int</span><span class='hs-num'>1</span></a><span class='hs-layout'>)</span> <span class='hs-varop'>$</span>
+<span class=hs-linenum> 58: </span>    <span class='hs-keyword'>let</span> <a class=annot href="#"><span class=annottext>{v : (Binomial.Tree a) | lqdc##$select v == ts
+                         &amp;&amp; lqdc##$select v == x
+                         &amp;&amp; root v == x
+                         &amp;&amp; subtrees v == ts}</span><span class='hs-varid'>residual</span></a> <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>{v : (Binomial.Tree a) | lqdc##$select v == ts
+                         &amp;&amp; lqdc##$select v == x
+                         &amp;&amp; root v == x
+                         &amp;&amp; subtrees v == ts}</span><span class='hs-conid'>Node</span></a> <a class=annot href="#"><span class=annottext>{VV : a | VV == x}</span><span class='hs-varid'>x</span></a> <a class=annot href="#"><span class=annottext>GHC.Types.Int</span><span class='hs-layout'>(</span></a><a class=annot href="#"><span class=annottext>{v : GHC.Types.Int | v &gt;= 0}</span><span class='hs-varid'>r</span></a> <span class='hs-comment'>-</span> <a class=annot href="#"><span class=annottext>GHC.Types.Int</span><span class='hs-num'>1</span></a><span class='hs-layout'>)</span> <a class=annot href="#"><span class=annottext>{v : [(Binomial.Tree {VV : a | x &lt;= VV})]&lt;\x5 VV -&gt; {v : (Binomial.Tree a) | treeRank v &gt; treeRank v}&gt; | (treeListSize v == 0 &lt;=&gt; len v == 0)
+                                                                                                         &amp;&amp; v == ts
+                                                                                                         &amp;&amp; len v &gt;= 0
+                                                                                                         &amp;&amp; treeListSize v &gt;= 0
+                                                                                                         &amp;&amp; len v &lt;= treeListSize v}</span><span class='hs-varid'>ts</span></a> <a class=annot href="#"><span class=annottext>GHC.Types.Int</span><span class='hs-layout'>(</span></a><a class=annot href="#"><span class=annottext>{v : GHC.Types.Int | v &gt;= 1}</span><span class='hs-varid'>sz</span></a> <span class='hs-comment'>-</span> <a class=annot href="#"><span class=annottext>{v : GHC.Types.Int | v == treeSize t
+                     &amp;&amp; v == 1 + treeListSize (subtrees t)
+                     &amp;&amp; v &gt;= 1}</span><span class='hs-layout'>(</span></a><span class='hs-varid'>treeSize</span> <a class=annot href="#"><span class=annottext>{v : (Binomial.Tree a) | v == t
+                         &amp;&amp; treeRank v == rank v
+                         &amp;&amp; treeRank v &gt;= 0}</span><span class='hs-varid'>t</span></a><span class='hs-layout'>)</span><span class='hs-layout'>)</span> <span class='hs-keyword'>in</span>
+<span class=hs-linenum> 59: </span>    <span class='hs-conid'>Bag.union</span> <a class=annot href="#"><span class=annottext>{VV : (Data.Map.Internal.Map a GHC.Types.Int) | VV == treeElts t
+                                                &amp;&amp; VV == Map_store (treeListElts (subtrees t)) (root t) (1 + Map_select (treeListElts (subtrees t)) (root t))}</span><span class='hs-layout'>(</span></a><span class='hs-varid'>treeElts</span> <a class=annot href="#"><span class=annottext>{v : (Binomial.Tree a) | v == t
+                         &amp;&amp; treeRank v == rank v
+                         &amp;&amp; treeRank v &gt;= 0}</span><span class='hs-varid'>t</span></a><span class='hs-layout'>)</span> <a class=annot href="#"><span class=annottext>{VV : (Data.Map.Internal.Map a GHC.Types.Int) | VV == treeElts residual
+                                                &amp;&amp; VV == Map_store (treeListElts (subtrees residual)) (root residual) (1 + Map_select (treeListElts (subtrees residual)) (root residual))}</span><span class='hs-layout'>(</span></a><span class='hs-varid'>treeElts</span> <a class=annot href="#"><span class=annottext>{v : (Binomial.Tree a) | v == residual
+                         &amp;&amp; lqdc##$select v == ts
+                         &amp;&amp; lqdc##$select v == x
+                         &amp;&amp; root v == x
+                         &amp;&amp; subtrees v == ts
+                         &amp;&amp; treeRank v == rank v
+                         &amp;&amp; treeRank v &gt;= 0}</span><span class='hs-varid'>residual</span></a><span class='hs-layout'>)</span>
+<span class=hs-linenum> 60: </span>
+<span class=hs-linenum> 61: </span><span class='hs-keyword'>{-@</span> <span class='hs-varid'>measure</span> <span class='hs-varid'>treeListElts</span> <span class='hs-keyword'>@-}</span>
+<span class=hs-linenum> 62: </span><span class='hs-definition'>treeListElts</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Ord</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>=&gt;</span> <span class='hs-keyglyph'>[</span><span class='hs-conid'>Tree</span> <span class='hs-varid'>a</span><span class='hs-keyglyph'>]</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Bag</span> <span class='hs-varid'>a</span>
+<span class=hs-linenum> 63: </span><a class=annot href="#"><span class=annottext>forall a .
+(GHC.Classes.Ord&lt;[]&gt; a) =&gt;
+x2:[(Binomial.Tree a)] -&gt; {VV : (Data.Map.Internal.Map a GHC.Types.Int) | VV == treeListElts x2}</span><span class='hs-definition'>treeListElts</span></a> <span class='hs-conid'>[]</span> <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>{VV : forall a .
+      {v : (Data.Map.Internal.Map a GHC.Types.Int) | v == Map_default 0} | VV == empty}</span><span class='hs-conid'>Bag.empty</span></a>
+<span class=hs-linenum> 64: </span><span class='hs-definition'>treeListElts</span> <span class='hs-layout'>(</span><span class='hs-varid'>t</span><span class='hs-conop'>:</span><span class='hs-varid'>ts</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>{v : (GHC.Classes.Ord a) | v == $dOrd_aiWX}</span><span class='hs-conid'>Bag.union</span></a> <a class=annot href="#"><span class=annottext>{v : (Data.Map.Internal.Map a GHC.Types.Int) | v == treeElts t
+                                               &amp;&amp; v == Map_store (treeListElts (subtrees t)) (root t) (1 + Map_select (treeListElts (subtrees t)) (root t))}</span><span class='hs-layout'>(</span></a><span class='hs-varid'>treeElts</span> <a class=annot href="#"><span class=annottext>{v : (Binomial.Tree a) | v == t
+                         &amp;&amp; treeElts v == Map_store (treeListElts (subtrees v)) (root v) (1 + Map_select (treeListElts (subtrees v)) (root v))
+                         &amp;&amp; treeRank v == rank v
+                         &amp;&amp; treeRank v &gt;= 0}</span><span class='hs-varid'>t</span></a><span class='hs-layout'>)</span> <a class=annot href="#"><span class=annottext>{v : (Data.Map.Internal.Map a GHC.Types.Int) | v == treeListElts ts}</span><span class='hs-layout'>(</span></a><span class='hs-varid'>treeListElts</span> <a class=annot href="#"><span class=annottext>{v : [(Binomial.Tree a)] | (treeListSize v == 0 &lt;=&gt; len v == 0)
+                           &amp;&amp; v == ts
+                           &amp;&amp; len v &gt;= 0
+                           &amp;&amp; treeListSize v &gt;= 0
+                           &amp;&amp; len v &lt;= treeListSize v}</span><span class='hs-varid'>ts</span></a><span class='hs-layout'>)</span>
+<span class=hs-linenum> 65: </span>
+<span class=hs-linenum> 66: </span><span class='hs-comment'>--{-@ measure head @-}</span>
+<span class=hs-linenum> 67: </span><span class='hs-comment'>--{-@ head :: {xs:[a] | len xs &gt; 0} -&gt; a @-}</span>
+<span class=hs-linenum> 68: </span><span class='hs-comment'>--head (x:_) = x</span>
+<span class=hs-linenum> 69: </span>
+<span class=hs-linenum> 70: </span><span class='hs-comment'>--{-@ measure tail @-}</span>
+<span class=hs-linenum> 71: </span><span class='hs-comment'>--{-@ tail :: {xs:[a] | len xs &gt; 0} -&gt; [a] @-}</span>
+<span class=hs-linenum> 72: </span><span class='hs-comment'>--tail (_:xs) = xs</span>
+<span class=hs-linenum> 73: </span>
+<span class=hs-linenum> 74: </span><span class='hs-comment'>-- Jamie: for that we need the pragmas</span>
+<span class=hs-linenum> 75: </span><span class='hs-keyword'>{-@</span> <span class='hs-varid'>reflect</span> <span class='hs-varid'>rankOfTailDecreases</span> <span class='hs-keyword'>@-}</span>
+<span class=hs-linenum> 76: </span><span class='hs-keyword'>{-@</span> <span class='hs-varid'>rankOfTailDecreases</span> <span class='hs-keyglyph'>::</span> <span class='hs-keyword'>{ts:</span><span class='hs-keyglyph'>[</span><span class='hs-keyword'>{t:</span><span class='hs-conid'>Tree</span> <span class='hs-varid'>a</span> <span class='hs-keyword'>| len ts &gt; treeRank t}</span><span class='hs-keyglyph'>]</span><span class='hs-keyword'>&lt;{\ti tj -&gt; treeRank ti &gt; treeRank tj}&gt;</span> <span class='hs-keyword'>| len ts &gt; 0}</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-keyword'>{v:</span><span class='hs-keyglyph'>[</span><span class='hs-keyword'>{t:</span><span class='hs-conid'>Tree</span> <span class='hs-varid'>a</span> <span class='hs-keyword'>| len ts - 1 &gt; treeRank t}</span><span class='hs-keyglyph'>]</span><span class='hs-keyword'>&lt;{\ti tj -&gt; treeRank ti &gt; treeRank tj}&gt;</span> <span class='hs-keyword'>| v = tail ts}</span> <span class='hs-keyword'>@-}</span>
+<span class=hs-linenum> 77: </span><span class='hs-definition'>rankOfTailDecreases</span> <span class='hs-keyglyph'>::</span> <span class='hs-keyglyph'>[</span><span class='hs-conid'>Tree</span> <span class='hs-varid'>a</span><span class='hs-keyglyph'>]</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-keyglyph'>[</span><span class='hs-conid'>Tree</span> <span class='hs-varid'>a</span><span class='hs-keyglyph'>]</span>
+<span class=hs-linenum> 78: </span><a class=annot href="#"><span class=annottext>forall a .
+x1:{ts : [{t : (Binomial.Tree a) | len ts &gt; treeRank t}]&lt;\x2 VV -&gt; {VV : (Binomial.Tree a) | treeRank x2 &gt; treeRank VV}&gt; | len ts &gt; 0} -&gt; {v : [{t : (Binomial.Tree a) | len x1 - 1 &gt; treeRank t}]&lt;\x2 VV -&gt; {VV : (Binomial.Tree a) | treeRank x2 &gt; treeRank VV}&gt; | v == tail x1}</span><span class='hs-definition'>rankOfTailDecreases</span></a> <span class='hs-layout'>(</span><span class='hs-keyword'>_</span><span class='hs-conop'>:</span><span class='hs-varid'>ts</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>{v : [(Binomial.Tree a)]&lt;\x5 VV -&gt; {v : (Binomial.Tree a) | treeRank v &gt; treeRank v}&gt; | (treeListSize v == 0 &lt;=&gt; len v == 0)
+                                                                                        &amp;&amp; v == ts
+                                                                                        &amp;&amp; len v &gt;= 0
+                                                                                        &amp;&amp; treeListSize v &gt;= 0
+                                                                                        &amp;&amp; len v &lt;= treeListSize v}</span><span class='hs-varid'>ts</span></a>
+<span class=hs-linenum> 79: </span>
+<span class=hs-linenum> 80: </span><span class='hs-keyword'>{-@</span> <span class='hs-varid'>reflect</span> <span class='hs-varid'>rankOfFirstTree</span> <span class='hs-keyword'>@-}</span>
+<span class=hs-linenum> 81: </span><span class='hs-keyword'>{-@</span> <span class='hs-varid'>rankOfFirstTree</span> <span class='hs-keyglyph'>::</span> <span class='hs-keyword'>{ts:</span><span class='hs-keyglyph'>[</span><span class='hs-keyword'>{t:</span><span class='hs-conid'>Tree</span> <span class='hs-varid'>a</span> <span class='hs-keyword'>| len ts &gt; treeRank t}</span><span class='hs-keyglyph'>]</span><span class='hs-keyword'>&lt;{\ti tj -&gt; treeRank ti &gt; treeRank tj}&gt;</span> <span class='hs-keyword'>| len ts &gt;= 1}</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-keyword'>{v:</span><span class='hs-conid'>Tree</span> <span class='hs-varid'>a</span> <span class='hs-keyword'>| treeRank v = len ts - 1 &amp;&amp; v = head ts}</span> <span class='hs-keyword'>@-}</span>
+<span class=hs-linenum> 82: </span><span class='hs-definition'>rankOfFirstTree</span> <span class='hs-keyglyph'>::</span>  <span class='hs-keyglyph'>[</span><span class='hs-conid'>Tree</span> <span class='hs-varid'>a</span><span class='hs-keyglyph'>]</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Tree</span> <span class='hs-varid'>a</span>
+<span class=hs-linenum> 83: </span><a class=annot href="#"><span class=annottext>forall a .
+x1:{ts : [{t : (Binomial.Tree a) | len ts &gt; treeRank t}]&lt;\x1 VV -&gt; {VV : (Binomial.Tree a) | treeRank x1 &gt; treeRank VV}&gt; | len ts &gt;= 1} -&gt; {v : (Binomial.Tree a) | v == head x1
+                                                                                                                                                                    &amp;&amp; treeRank v == len x1 - 1}</span><span class='hs-definition'>rankOfFirstTree</span></a> <span class='hs-keyglyph'>[</span><span class='hs-varid'>t</span><span class='hs-keyglyph'>]</span> <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>{v : (Binomial.Tree a) | v == t
+                         &amp;&amp; treeElts v == Map_store (treeListElts (subtrees v)) (root v) (1 + Map_select (treeListElts (subtrees v)) (root v))
+                         &amp;&amp; treeRank v == rank v
+                         &amp;&amp; treeRank v &gt;= 0}</span><span class='hs-varid'>t</span></a>
+<span class=hs-linenum> 84: </span><span class='hs-definition'>rankOfFirstTree</span> <span class='hs-varid'>ts</span><span class='hs-keyglyph'>@</span><span class='hs-layout'>(</span><span class='hs-varid'>t</span><span class='hs-conop'>:</span><span class='hs-keyword'>_</span><span class='hs-conop'>:</span><span class='hs-keyword'>_</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>(Binomial.Tree a)</span><span class='hs-varid'>rankOfFirstTree</span></a> <a class=annot href="#"><span class=annottext>[(Binomial.Tree a)]&lt;\x4 VV -&gt; {v : (Binomial.Tree a) | treeRank v &gt; treeRank v}&gt;</span><span class='hs-layout'>(</span></a><span class='hs-varid'>rankOfTailDecreases</span> <a class=annot href="#"><span class=annottext>{v : [{v : (Binomial.Tree a) | len v &gt; treeRank v}]&lt;\x6 VV -&gt; {v : (Binomial.Tree a) | treeRank v &gt; treeRank v}&gt; | (treeListSize v == 0 &lt;=&gt; len v == 0)
+                                                                                                                   &amp;&amp; len v &gt;= 0
+                                                                                                                   &amp;&amp; len v &gt;= 1
+                                                                                                                   &amp;&amp; treeListSize v &gt;= 0
+                                                                                                                   &amp;&amp; len v &lt;= treeListSize v}</span><span class='hs-varid'>ts</span></a><span class='hs-layout'>)</span> <span class='hs-varop'>`seq`</span> <a class=annot href="#"><span class=annottext>{v : (Binomial.Tree a) | v == t
+                         &amp;&amp; treeElts v == Map_store (treeListElts (subtrees v)) (root v) (1 + Map_select (treeListElts (subtrees v)) (root v))
+                         &amp;&amp; treeRank v == rank v
+                         &amp;&amp; treeRank v &gt;= 0}</span><span class='hs-varid'>t</span></a>
+<span class=hs-linenum> 85: </span>
+<span class=hs-linenum> 86: </span><span class='hs-comment'>-- verifying heap functions</span>
+<span class=hs-linenum> 87: </span>
+<span class=hs-linenum> 88: </span><span class='hs-keyword'>{-@</span> <span class='hs-keyword'>data</span> <span class='hs-conid'>Heap</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>=</span> <span class='hs-conid'>Heap</span> <span class='hs-layout'>{</span> <span class='hs-varid'>unheap</span> <span class='hs-keyglyph'>::</span> <span class='hs-keyglyph'>[</span><span class='hs-conid'>Tree</span> <span class='hs-varid'>a</span><span class='hs-keyglyph'>]</span> <span class='hs-layout'>}</span> <span class='hs-keyword'>@-}</span>
+<span class=hs-linenum> 89: </span><span class='hs-keyword'>data</span> <span class='hs-conid'>Heap</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>=</span> <span class='hs-conid'>Heap</span> <span class='hs-layout'>{</span> <span class='hs-varid'>unheap</span> <span class='hs-keyglyph'>::</span> <span class='hs-keyglyph'>[</span><span class='hs-conid'>Tree</span> <span class='hs-varid'>a</span><span class='hs-keyglyph'>]</span> <span class='hs-layout'>}</span>
+<span class=hs-linenum> 90: </span>
+<span class=hs-linenum> 91: </span><span class='hs-keyword'>{-@</span> <span class='hs-varid'>measure</span> <span class='hs-varid'>elts</span> <span class='hs-keyword'>@-}</span>
+<span class=hs-linenum> 92: </span><span class='hs-keyword'>{-@</span> <span class='hs-varid'>elts</span> <span class='hs-keyglyph'>::</span> <span class='hs-varid'>h</span><span class='hs-conop'>:</span><span class='hs-conid'>Heap</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-keyword'>{v:</span><span class='hs-conid'>Bag</span> <span class='hs-varid'>a</span> <span class='hs-keyword'>| v = treeListElts (unheap h)}</span> <span class='hs-keyword'>@-}</span>
+<span class=hs-linenum> 93: </span><span class='hs-definition'>elts</span> <span class='hs-keyglyph'>::</span> <span class='hs-layout'>(</span><span class='hs-conid'>Ord</span> <span class='hs-varid'>a</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>=&gt;</span> <span class='hs-conid'>Heap</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Bag</span> <span class='hs-varid'>a</span>
+<span class=hs-linenum> 94: </span><a class=annot href="#"><span class=annottext>forall a .
+(GHC.Classes.Ord&lt;[]&gt; a) =&gt;
+x2:(Binomial.Heap a) -&gt; {VV : (Data.Map.Internal.Map a GHC.Types.Int) | VV == elts x2
+                                                                        &amp;&amp; VV == treeListElts (unheap x2)}</span><span class='hs-definition'>elts</span></a> <span class='hs-layout'>(</span><span class='hs-conid'>Heap</span> <span class='hs-varid'>ts</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>forall a .
+(GHC.Classes.Ord&lt;[]&gt; a) =&gt;
+x2:[(Binomial.Tree a)] -&gt; {VV : (Data.Map.Internal.Map a GHC.Types.Int) | VV == treeListElts x2}</span><span class='hs-varid'>treeListElts</span></a> <a class=annot href="#"><span class=annottext>{v : [(Binomial.Tree a)] | (treeListSize v == 0 &lt;=&gt; len v == 0)
+                           &amp;&amp; v == ts
+                           &amp;&amp; len v &gt;= 0
+                           &amp;&amp; treeListSize v &gt;= 0
+                           &amp;&amp; len v &lt;= treeListSize v}</span><span class='hs-varid'>ts</span></a>
+<span class=hs-linenum> 95: </span>
+<span class=hs-linenum> 96: </span><span class='hs-keyword'>{-@</span> <span class='hs-varid'>measure</span> <span class='hs-varid'>listElts</span> <span class='hs-keyword'>@-}</span>
+<span class=hs-linenum> 97: </span><span class='hs-keyword'>{-@</span> <span class='hs-varid'>listElts</span> <span class='hs-keyglyph'>::</span> <span class='hs-keyglyph'>[</span><span class='hs-varid'>a</span><span class='hs-keyglyph'>]</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Bag</span> <span class='hs-varid'>a</span> <span class='hs-keyword'>@-}</span>
+<span class=hs-linenum> 98: </span><span class='hs-definition'>listElts</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Ord</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>=&gt;</span> <span class='hs-keyglyph'>[</span><span class='hs-varid'>a</span><span class='hs-keyglyph'>]</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Bag</span> <span class='hs-varid'>a</span>
+<span class=hs-linenum> 99: </span><a class=annot href="#"><span class=annottext>forall a .
+(GHC.Classes.Ord&lt;[]&gt; a) =&gt;
+x2:[a] -&gt; {VV : (Data.Map.Internal.Map a GHC.Types.Int) | VV == listElts x2}</span><span class='hs-definition'>listElts</span></a> <span class='hs-conid'>[]</span> <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>{VV : forall a .
+      {v : (Data.Map.Internal.Map a GHC.Types.Int) | v == Map_default 0} | VV == empty}</span><span class='hs-conid'>Bag.empty</span></a>
+<span class=hs-linenum>100: </span><span class='hs-definition'>listElts</span> <span class='hs-layout'>(</span><span class='hs-varid'>x</span> <span class='hs-conop'>:</span> <span class='hs-varid'>xs</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>{v : (GHC.Classes.Ord a) | v == $dOrd_aiVe}</span><span class='hs-conid'>Bag.union</span></a> <a class=annot href="#"><span class=annottext>(Data.Map.Internal.Map a GHC.Types.Int)</span><span class='hs-layout'>(</span></a><span class='hs-conid'>Bag.put</span> <a class=annot href="#"><span class=annottext>{VV : a | VV == x}</span><span class='hs-varid'>x</span></a> <a class=annot href="#"><span class=annottext>{VV : forall a .
+      {v : (Data.Map.Internal.Map a GHC.Types.Int) | v == Map_default 0} | VV == empty}</span><span class='hs-conid'>Bag.empty</span></a><span class='hs-layout'>)</span> <a class=annot href="#"><span class=annottext>{v : (Data.Map.Internal.Map a GHC.Types.Int) | v == listElts xs}</span><span class='hs-layout'>(</span></a><span class='hs-varid'>listElts</span> <a class=annot href="#"><span class=annottext>{v : [a] | (treeListSize v == 0 &lt;=&gt; len v == 0)
+           &amp;&amp; v == xs
+           &amp;&amp; len v &gt;= 0
+           &amp;&amp; treeListSize v &gt;= 0
+           &amp;&amp; len v &lt;= treeListSize v}</span><span class='hs-varid'>xs</span></a><span class='hs-layout'>)</span>
+<span class=hs-linenum>101: </span>
+<span class=hs-linenum>102: </span><span class='hs-keyword'>{-@</span> <span class='hs-varid'>predicate</span> <span class='hs-conid'>TEltsSize</span> <span class='hs-conid'>T</span> <span class='hs-conid'>X</span> <span class='hs-conid'>Y</span> <span class='hs-keyglyph'>=</span> <span class='hs-layout'>(</span><span class='hs-varid'>treeElts</span> <span class='hs-conid'>T</span> <span class='hs-keyglyph'>=</span> <span class='hs-conid'>X</span> <span class='hs-varop'>&amp;&amp;</span> <span class='hs-varid'>treeSize</span> <span class='hs-conid'>T</span> <span class='hs-keyglyph'>=</span> <span class='hs-conid'>Y</span> <span class='hs-layout'>)</span><span class='hs-keyword'>@-}</span>
+<span class=hs-linenum>103: </span><span class='hs-keyword'>{-@</span> <span class='hs-varid'>predicate</span> <span class='hs-conid'>HEltsSize</span> <span class='hs-conid'>H</span> <span class='hs-conid'>X</span> <span class='hs-conid'>Y</span> <span class='hs-keyglyph'>=</span> <span class='hs-layout'>(</span><span class='hs-varid'>elts</span> <span class='hs-conid'>H</span> <span class='hs-keyglyph'>=</span> <span class='hs-conid'>X</span> <span class='hs-varop'>&amp;&amp;</span> <span class='hs-varid'>size</span> <span class='hs-conid'>H</span> <span class='hs-keyglyph'>=</span> <span class='hs-conid'>Y</span><span class='hs-layout'>)</span> <span class='hs-keyword'>@-}</span>
+<span class=hs-linenum>104: </span><span class='hs-keyword'>{-@</span> <span class='hs-varid'>predicate</span> <span class='hs-conid'>TsEltsSize</span> <span class='hs-conid'>Ts</span> <span class='hs-conid'>X</span> <span class='hs-conid'>Y</span> <span class='hs-keyglyph'>=</span> <span class='hs-layout'>(</span><span class='hs-varid'>treeListElts</span> <span class='hs-conid'>Ts</span> <span class='hs-keyglyph'>=</span> <span class='hs-conid'>X</span> <span class='hs-varop'>&amp;&amp;</span> <span class='hs-varid'>treeListSize</span> <span class='hs-conid'>Ts</span> <span class='hs-keyglyph'>=</span> <span class='hs-conid'>Y</span><span class='hs-layout'>)</span> <span class='hs-keyword'>@-}</span>
+<span class=hs-linenum>105: </span><span class='hs-keyword'>{-@</span> <span class='hs-varid'>predicate</span> <span class='hs-conid'>LEltsSize</span> <span class='hs-conid'>H</span> <span class='hs-conid'>X</span> <span class='hs-conid'>Y</span> <span class='hs-keyglyph'>=</span> <span class='hs-layout'>(</span><span class='hs-varid'>listElts</span> <span class='hs-conid'>H</span> <span class='hs-keyglyph'>=</span> <span class='hs-conid'>X</span> <span class='hs-varop'>&amp;&amp;</span> <span class='hs-varid'>len</span> <span class='hs-conid'>H</span> <span class='hs-keyglyph'>=</span> <span class='hs-conid'>Y</span><span class='hs-layout'>)</span> <span class='hs-keyword'>@-}</span>
+<span class=hs-linenum>106: </span>
+<span class=hs-linenum>107: </span><span class='hs-comment'>{- Verification of [link] -}</span>
+<span class=hs-linenum>108: </span>
+<span class=hs-linenum>109: </span><span class='hs-keyword'>{-@</span> <span class='hs-varid'>treeAtLeastRoot</span> <span class='hs-keyglyph'>::</span> <span class='hs-varid'>t</span><span class='hs-conop'>:</span><span class='hs-conid'>Tree</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-keyword'>{v:</span><span class='hs-conid'>AtLeastTree</span> <span class='hs-varid'>a</span> <span class='hs-layout'>(</span><span class='hs-varid'>root</span> <span class='hs-varid'>t</span><span class='hs-layout'>)</span> <span class='hs-keyword'>|  v = t}</span> <span class='hs-keyword'>@-}</span>
+<span class=hs-linenum>110: </span><span class='hs-definition'>treeAtLeastRoot</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Tree</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Tree</span> <span class='hs-varid'>a</span>
+<span class=hs-linenum>111: </span><a class=annot href="#"><span class=annottext>forall a .
+x1:(Binomial.Tree a) -&gt; {VV : (Binomial.Tree {VV : a | root x1 &lt;= VV}) | VV == x1}</span><span class='hs-definition'>treeAtLeastRoot</span></a> <span class='hs-layout'>(</span><span class='hs-conid'>Node</span> <span class='hs-varid'>x</span> <span class='hs-varid'>r</span> <span class='hs-varid'>ts</span> <span class='hs-varid'>sz</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>{VV : forall a .
+      x1:a -&gt; x2:{v : GHC.Types.Int | v &gt;= 0} -&gt; x3:{v : [{v : (Binomial.Tree {VV : a | x1 &lt;= VV}) | x2 &gt; treeRank v}]&lt;\x16 VV -&gt; {v : (Binomial.Tree a) | treeRank v &gt; treeRank v}&gt; | len v == x2} -&gt; x4:{v : GHC.Types.Int | v == 1 + treeListSize x3
+                                                                                                                                                                                                                               &amp;&amp; v &gt;= 1} -&gt; {v : (Binomial.Tree a) | v == Node x1 x2 x3 x4
+                                                                                                                                                                                                                                                                      &amp;&amp; lqdc##$select v == x1
+                                                                                                                                                                                                                                                                      &amp;&amp; lqdc##$select v == x2
+                                                                                                                                                                                                                                                                      &amp;&amp; lqdc##$select v == x3
+                                                                                                                                                                                                                                                                      &amp;&amp; lqdc##$select v == x4
+                                                                                                                                                                                                                                                                      &amp;&amp; rank v == x2
+                                                                                                                                                                                                                                                                      &amp;&amp; root v == x1
+                                                                                                                                                                                                                                                                      &amp;&amp; subtrees v == x3
+                                                                                                                                                                                                                                                                      &amp;&amp; treeRank v == x2
+                                                                                                                                                                                                                                                                      &amp;&amp; treeSize v == x4} | VV == Node}</span><span class='hs-conid'>Node</span></a> <a class=annot href="#"><span class=annottext>{VV : a | VV == x}</span><span class='hs-varid'>x</span></a> <a class=annot href="#"><span class=annottext>{v : GHC.Types.Int | v == r
+                     &amp;&amp; v &gt;= 0}</span><span class='hs-varid'>r</span></a> <a class=annot href="#"><span class=annottext>{v : [{v : (Binomial.Tree {VV : a | x &lt;= VV}) | r &gt; treeRank v}]&lt;\x6 VV -&gt; {v : (Binomial.Tree a) | treeRank v &gt; treeRank v}&gt; | (treeListSize v == 0 &lt;=&gt; len v == 0)
+                                                                                                                                &amp;&amp; v == ts
+                                                                                                                                &amp;&amp; len v == r
+                                                                                                                                &amp;&amp; len v &gt;= 0
+                                                                                                                                &amp;&amp; treeListSize v &gt;= 0
+                                                                                                                                &amp;&amp; len v &lt;= treeListSize v}</span><span class='hs-varid'>ts</span></a> <a class=annot href="#"><span class=annottext>{v : GHC.Types.Int | v == sz
+                     &amp;&amp; v == 1 + treeListSize ts
+                     &amp;&amp; v &gt;= 1}</span><span class='hs-varid'>sz</span></a>
+<span class=hs-linenum>112: </span>
+<span class=hs-linenum>113: </span><span class='hs-comment'>-- TODO link</span>
+<span class=hs-linenum>114: </span>
+<span class=hs-linenum>115: </span><span class='hs-keyword'>{-@</span> <span class='hs-varid'>link</span> <span class='hs-keyglyph'>::</span> <span class='hs-varid'>t1</span><span class='hs-conop'>:</span><span class='hs-conid'>Tree</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-keyword'>{t2:</span><span class='hs-conid'>Tree</span> <span class='hs-varid'>a</span> <span class='hs-keyword'>| rank t2 = rank t1}</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-keyword'>{v:</span><span class='hs-conid'>Tree</span> <span class='hs-varid'>a</span> <span class='hs-keyword'>| TEltsSize v (Bag.union (treeElts t1) (treeElts t2)) (treeSize t1 + treeSize t2) &amp;&amp; rank v = rank t1 + 1}</span>
+<span class=hs-linenum>116: </span><span class='hs-keyword'>@-}</span>
+<span class=hs-linenum>117: </span><span class='hs-definition'>link</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Ord</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>=&gt;</span> <span class='hs-conid'>Tree</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Tree</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Tree</span> <span class='hs-varid'>a</span>
+<span class=hs-linenum>118: </span><a class=annot href="#"><span class=annottext>forall a .
+(GHC.Classes.Ord&lt;[]&gt; a) =&gt;
+x2:(Binomial.Tree a) -&gt; x3:{t2 : (Binomial.Tree a) | rank t2 == rank x2} -&gt; {v : (Binomial.Tree a) | rank v == rank x2 + 1
+                                                                                                     &amp;&amp; treeElts v == Map_union (treeElts x2) (treeElts x3)
+                                                                                                     &amp;&amp; treeSize v == treeSize x2 + treeSize x3}</span><span class='hs-definition'>link</span></a> <a class=annot href="#"><span class=annottext>(Binomial.Tree a)</span><span class='hs-varid'>t1</span></a><span class='hs-keyglyph'>@</span><span class='hs-layout'>(</span><span class='hs-conid'>Node</span> <span class='hs-varid'>x1</span> <span class='hs-varid'>r1</span> <span class='hs-varid'>ts1</span> <span class='hs-varid'>sz1</span><span class='hs-layout'>)</span> <a class=annot href="#"><span class=annottext>{t2 : (Binomial.Tree a) | rank t2 == rank t1}</span><span class='hs-varid'>t2</span></a><span class='hs-keyglyph'>@</span><span class='hs-layout'>(</span><span class='hs-conid'>Node</span> <span class='hs-varid'>x2</span> <span class='hs-varid'>r2</span> <span class='hs-varid'>ts2</span> <span class='hs-varid'>sz2</span><span class='hs-layout'>)</span>
+<span class=hs-linenum>119: </span>  <span class='hs-keyglyph'>|</span> <a class=annot href="#"><span class=annottext>{VV : a | VV == x1}</span><span class='hs-varid'>x1</span></a> <span class='hs-varop'>&lt;=</span> <a class=annot href="#"><span class=annottext>{VV : a | VV == x2}</span><span class='hs-varid'>x2</span></a>  <span class='hs-keyglyph'>=</span>
+<span class=hs-linenum>120: </span>      <span class='hs-keyword'>let</span> <a class=annot href="#"><span class=annottext>{v : (Binomial.Tree a) | lqdc##$select v == x1
+                         &amp;&amp; root v == x1}</span><span class='hs-varid'>new</span></a> <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>{v : (Binomial.Tree a) | lqdc##$select v == x1
+                         &amp;&amp; root v == x1}</span><span class='hs-conid'>Node</span></a> <a class=annot href="#"><span class=annottext>{VV : a | VV == x1}</span><span class='hs-varid'>x1</span></a> <a class=annot href="#"><span class=annottext>GHC.Types.Int</span><span class='hs-layout'>(</span></a><a class=annot href="#"><span class=annottext>{v : GHC.Types.Int | v == r1
+                     &amp;&amp; v &gt;= 0}</span><span class='hs-varid'>r1</span></a> <span class='hs-varop'>+</span> <a class=annot href="#"><span class=annottext>GHC.Types.Int</span><span class='hs-num'>1</span></a><span class='hs-layout'>)</span> <a class=annot href="#"><span class=annottext>{v : [(Binomial.Tree a)] | len v == 1 + len ts1
+                           &amp;&amp; lqdc##$select v == ts1
+                           &amp;&amp; tail v == ts1}</span><span class='hs-layout'>(</span></a><a class=annot href="#"><span class=annottext>(Binomial.Tree a)</span><span class='hs-layout'>(</span></a><span class='hs-varid'>treeAtLeastRoot</span> <a class=annot href="#"><span class=annottext>{v : (Binomial.Tree a) | v == t2
+                         &amp;&amp; v == Node v r2 ts2 sz2
+                         &amp;&amp; lqdc##$select v == r2
+                         &amp;&amp; lqdc##$select v == sz2
+                         &amp;&amp; lqdc##$select v == ts2
+                         &amp;&amp; lqdc##$select v == v
+                         &amp;&amp; rank v == r2
+                         &amp;&amp; rank v == rank t1
+                         &amp;&amp; root v == v
+                         &amp;&amp; subtrees v == ts2
+                         &amp;&amp; treeElts v == Map_store (treeListElts (subtrees v)) (root v) (1 + Map_select (treeListElts (subtrees v)) (root v))
+                         &amp;&amp; treeRank v == r2
+                         &amp;&amp; treeRank v == rank v
+                         &amp;&amp; treeSize v == sz2
+                         &amp;&amp; treeRank v &gt;= 0}</span><span class='hs-varid'>t2</span></a><span class='hs-layout'>)</span><span class='hs-conop'>:</span><a class=annot href="#"><span class=annottext>{v : [{v : (Binomial.Tree {VV : a | x1 &lt;= VV}) | r1 &gt; treeRank v}]&lt;\x6 VV -&gt; {v : (Binomial.Tree a) | treeRank v &gt; treeRank v}&gt; | (treeListSize v == 0 &lt;=&gt; len v == 0)
+                                                                                                                                  &amp;&amp; v == ts1
+                                                                                                                                  &amp;&amp; len v == r1
+                                                                                                                                  &amp;&amp; len v &gt;= 0
+                                                                                                                                  &amp;&amp; treeListSize v &gt;= 0
+                                                                                                                                  &amp;&amp; len v &lt;= treeListSize v}</span><span class='hs-varid'>ts1</span></a><span class='hs-layout'>)</span> <a class=annot href="#"><span class=annottext>{v : GHC.Types.Int | v == sz1 + sz2}</span><span class='hs-layout'>(</span></a><a class=annot href="#"><span class=annottext>{v : GHC.Types.Int | v == sz1
+                     &amp;&amp; v == 1 + treeListSize ts1
+                     &amp;&amp; v &gt;= 1}</span><span class='hs-varid'>sz1</span></a> <span class='hs-varop'>+</span> <a class=annot href="#"><span class=annottext>{v : GHC.Types.Int | v == sz2
+                     &amp;&amp; v == 1 + treeListSize ts2
+                     &amp;&amp; v &gt;= 1}</span><span class='hs-varid'>sz2</span></a><span class='hs-layout'>)</span> <span class='hs-keyword'>in</span>
+<span class=hs-linenum>121: </span>      <a class=annot href="#"><span class=annottext>x1:(Binomial.Tree a) -&gt; {v : (Binomial.Tree a) | v == x1}</span><span class='hs-varid'>assert</span></a> <a class=annot href="#"><span class=annottext>GHC.Types.Bool</span><span class='hs-layout'>(</span></a><a class=annot href="#"><span class=annottext>{v : (Data.Map.Internal.Map a GHC.Types.Int) | v == treeElts new
+                                               &amp;&amp; v == Map_store (treeListElts (subtrees new)) (root new) (1 + Map_select (treeListElts (subtrees new)) (root new))}</span><span class='hs-varid'>treeElts</span></a> <a class=annot href="#"><span class=annottext>{v : (Binomial.Tree a) | v == new
+                         &amp;&amp; lqdc##$select v == x1
+                         &amp;&amp; root v == x1
+                         &amp;&amp; treeElts v == Map_store (treeListElts (subtrees v)) (root v) (1 + Map_select (treeListElts (subtrees v)) (root v))
+                         &amp;&amp; treeRank v == rank v
+                         &amp;&amp; treeRank v &gt;= 0}</span><span class='hs-varid'>new</span></a> <span class='hs-varop'>==</span> <a class=annot href="#"><span class=annottext>(Data.Map.Internal.Map a GHC.Types.Int)</span><span class='hs-conid'>Bag.union</span></a> <a class=annot href="#"><span class=annottext>(Data.Map.Internal.Map a GHC.Types.Int)</span><span class='hs-layout'>(</span></a><span class='hs-varid'>treeElts</span> <a class=annot href="#"><span class=annottext>{v : (Binomial.Tree a) | v == t1
+                         &amp;&amp; v == Node x1 r1 ts1 sz1
+                         &amp;&amp; lqdc##$select v == r1
+                         &amp;&amp; lqdc##$select v == sz1
+                         &amp;&amp; lqdc##$select v == ts1
+                         &amp;&amp; lqdc##$select v == x1
+                         &amp;&amp; rank v == r1
+                         &amp;&amp; root v == x1
+                         &amp;&amp; subtrees v == ts1
+                         &amp;&amp; treeElts v == Map_store (treeListElts (subtrees v)) (root v) (1 + Map_select (treeListElts (subtrees v)) (root v))
+                         &amp;&amp; treeRank v == r1
+                         &amp;&amp; treeRank v == rank v
+                         &amp;&amp; treeSize v == sz1
+                         &amp;&amp; treeRank v &gt;= 0}</span><span class='hs-varid'>t1</span></a><span class='hs-layout'>)</span> <a class=annot href="#"><span class=annottext>(Data.Map.Internal.Map a GHC.Types.Int)</span><span class='hs-layout'>(</span></a><span class='hs-varid'>treeElts</span> <a class=annot href="#"><span class=annottext>{v : (Binomial.Tree a) | v == t2
+                         &amp;&amp; v == Node v r2 ts2 sz2
+                         &amp;&amp; lqdc##$select v == r2
+                         &amp;&amp; lqdc##$select v == sz2
+                         &amp;&amp; lqdc##$select v == ts2
+                         &amp;&amp; lqdc##$select v == v
+                         &amp;&amp; rank v == r2
+                         &amp;&amp; rank v == rank t1
+                         &amp;&amp; root v == v
+                         &amp;&amp; subtrees v == ts2
+                         &amp;&amp; treeElts v == Map_store (treeListElts (subtrees v)) (root v) (1 + Map_select (treeListElts (subtrees v)) (root v))
+                         &amp;&amp; treeRank v == r2
+                         &amp;&amp; treeRank v == rank v
+                         &amp;&amp; treeSize v == sz2
+                         &amp;&amp; treeRank v &gt;= 0}</span><span class='hs-varid'>t2</span></a><span class='hs-layout'>)</span><span class='hs-layout'>)</span> <span class='hs-varop'>$</span>
+<span class=hs-linenum>122: </span>      <a class=annot href="#"><span class=annottext>{v : (Binomial.Tree a) | v == new
+                         &amp;&amp; lqdc##$select v == x1
+                         &amp;&amp; root v == x1
+                         &amp;&amp; treeElts v == Map_store (treeListElts (subtrees v)) (root v) (1 + Map_select (treeListElts (subtrees v)) (root v))
+                         &amp;&amp; treeRank v == rank v
+                         &amp;&amp; treeRank v &gt;= 0}</span><span class='hs-varid'>new</span></a>
+<span class=hs-linenum>123: </span>  <span class='hs-keyglyph'>|</span> <span class='hs-varid'>otherwise</span> <span class='hs-keyglyph'>=</span>
+<span class=hs-linenum>124: </span>      <span class='hs-keyword'>let</span> <a class=annot href="#"><span class=annottext>{v : (Binomial.Tree a) | lqdc##$select v == v
+                         &amp;&amp; root v == v}</span><span class='hs-varid'>new</span></a> <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>{v : (Binomial.Tree a) | lqdc##$select v == v
+                         &amp;&amp; root v == v}</span><span class='hs-conid'>Node</span></a> <a class=annot href="#"><span class=annottext>{VV : a | VV == x2}</span><span class='hs-varid'>x2</span></a> <a class=annot href="#"><span class=annottext>GHC.Types.Int</span><span class='hs-layout'>(</span></a><a class=annot href="#"><span class=annottext>{v : GHC.Types.Int | v == r2
+                     &amp;&amp; v &gt;= 0}</span><span class='hs-varid'>r2</span></a> <span class='hs-varop'>+</span> <a class=annot href="#"><span class=annottext>GHC.Types.Int</span><span class='hs-num'>1</span></a><span class='hs-layout'>)</span> <a class=annot href="#"><span class=annottext>{v : [(Binomial.Tree a)] | len v == 1 + len ts2
+                           &amp;&amp; lqdc##$select v == ts2
+                           &amp;&amp; tail v == ts2}</span><span class='hs-layout'>(</span></a><a class=annot href="#"><span class=annottext>(Binomial.Tree a)</span><span class='hs-layout'>(</span></a><span class='hs-varid'>treeAtLeastRoot</span> <a class=annot href="#"><span class=annottext>{v : (Binomial.Tree a) | v == t1
+                         &amp;&amp; v == Node x1 r1 ts1 sz1
+                         &amp;&amp; lqdc##$select v == r1
+                         &amp;&amp; lqdc##$select v == sz1
+                         &amp;&amp; lqdc##$select v == ts1
+                         &amp;&amp; lqdc##$select v == x1
+                         &amp;&amp; rank v == r1
+                         &amp;&amp; root v == x1
+                         &amp;&amp; subtrees v == ts1
+                         &amp;&amp; treeElts v == Map_store (treeListElts (subtrees v)) (root v) (1 + Map_select (treeListElts (subtrees v)) (root v))
+                         &amp;&amp; treeRank v == r1
+                         &amp;&amp; treeRank v == rank v
+                         &amp;&amp; treeSize v == sz1
+                         &amp;&amp; treeRank v &gt;= 0}</span><span class='hs-varid'>t1</span></a><span class='hs-layout'>)</span><span class='hs-conop'>:</span><a class=annot href="#"><span class=annottext>{v : [{v : (Binomial.Tree {VV : a | x2 &lt;= VV}) | r2 &gt; treeRank v}]&lt;\x6 VV -&gt; {v : (Binomial.Tree a) | treeRank v &gt; treeRank v}&gt; | (treeListSize v == 0 &lt;=&gt; len v == 0)
+                                                                                                                                  &amp;&amp; v == ts2
+                                                                                                                                  &amp;&amp; len v == r2
+                                                                                                                                  &amp;&amp; len v &gt;= 0
+                                                                                                                                  &amp;&amp; treeListSize v &gt;= 0
+                                                                                                                                  &amp;&amp; len v &lt;= treeListSize v}</span><span class='hs-varid'>ts2</span></a><span class='hs-layout'>)</span> <a class=annot href="#"><span class=annottext>{v : GHC.Types.Int | v == sz1 + sz2}</span><span class='hs-layout'>(</span></a><a class=annot href="#"><span class=annottext>{v : GHC.Types.Int | v == sz1
+                     &amp;&amp; v == 1 + treeListSize ts1
+                     &amp;&amp; v &gt;= 1}</span><span class='hs-varid'>sz1</span></a> <span class='hs-varop'>+</span> <a class=annot href="#"><span class=annottext>{v : GHC.Types.Int | v == sz2
+                     &amp;&amp; v == 1 + treeListSize ts2
+                     &amp;&amp; v &gt;= 1}</span><span class='hs-varid'>sz2</span></a><span class='hs-layout'>)</span> <span class='hs-keyword'>in</span>
+<span class=hs-linenum>125: </span>      <a class=annot href="#"><span class=annottext>x1:(Binomial.Tree a) -&gt; {v : (Binomial.Tree a) | v == x1}</span><span class='hs-varid'>assert</span></a> <a class=annot href="#"><span class=annottext>GHC.Types.Bool</span><span class='hs-layout'>(</span></a><a class=annot href="#"><span class=annottext>{v : (Data.Map.Internal.Map a GHC.Types.Int) | v == treeElts new
+                                               &amp;&amp; v == Map_store (treeListElts (subtrees new)) (root new) (1 + Map_select (treeListElts (subtrees new)) (root new))}</span><span class='hs-varid'>treeElts</span></a> <a class=annot href="#"><span class=annottext>{v : (Binomial.Tree a) | v == new
+                         &amp;&amp; lqdc##$select v == v
+                         &amp;&amp; root v == v
+                         &amp;&amp; treeElts v == Map_store (treeListElts (subtrees v)) (root v) (1 + Map_select (treeListElts (subtrees v)) (root v))
+                         &amp;&amp; treeRank v == rank v
+                         &amp;&amp; treeRank v &gt;= 0}</span><span class='hs-varid'>new</span></a> <span class='hs-varop'>==</span> <a class=annot href="#"><span class=annottext>(Data.Map.Internal.Map a GHC.Types.Int)</span><span class='hs-conid'>Bag.union</span></a> <a class=annot href="#"><span class=annottext>(Data.Map.Internal.Map a GHC.Types.Int)</span><span class='hs-layout'>(</span></a><span class='hs-varid'>treeElts</span> <a class=annot href="#"><span class=annottext>{v : (Binomial.Tree a) | v == t1
+                         &amp;&amp; v == Node x1 r1 ts1 sz1
+                         &amp;&amp; lqdc##$select v == r1
+                         &amp;&amp; lqdc##$select v == sz1
+                         &amp;&amp; lqdc##$select v == ts1
+                         &amp;&amp; lqdc##$select v == x1
+                         &amp;&amp; rank v == r1
+                         &amp;&amp; root v == x1
+                         &amp;&amp; subtrees v == ts1
+                         &amp;&amp; treeElts v == Map_store (treeListElts (subtrees v)) (root v) (1 + Map_select (treeListElts (subtrees v)) (root v))
+                         &amp;&amp; treeRank v == r1
+                         &amp;&amp; treeRank v == rank v
+                         &amp;&amp; treeSize v == sz1
+                         &amp;&amp; treeRank v &gt;= 0}</span><span class='hs-varid'>t1</span></a><span class='hs-layout'>)</span> <a class=annot href="#"><span class=annottext>(Data.Map.Internal.Map a GHC.Types.Int)</span><span class='hs-layout'>(</span></a><span class='hs-varid'>treeElts</span> <a class=annot href="#"><span class=annottext>{v : (Binomial.Tree a) | v == t2
+                         &amp;&amp; v == Node v r2 ts2 sz2
+                         &amp;&amp; lqdc##$select v == r2
+                         &amp;&amp; lqdc##$select v == sz2
+                         &amp;&amp; lqdc##$select v == ts2
+                         &amp;&amp; lqdc##$select v == v
+                         &amp;&amp; rank v == r2
+                         &amp;&amp; rank v == rank t1
+                         &amp;&amp; root v == v
+                         &amp;&amp; subtrees v == ts2
+                         &amp;&amp; treeElts v == Map_store (treeListElts (subtrees v)) (root v) (1 + Map_select (treeListElts (subtrees v)) (root v))
+                         &amp;&amp; treeRank v == r2
+                         &amp;&amp; treeRank v == rank v
+                         &amp;&amp; treeSize v == sz2
+                         &amp;&amp; treeRank v &gt;= 0}</span><span class='hs-varid'>t2</span></a><span class='hs-layout'>)</span><span class='hs-layout'>)</span> <span class='hs-varop'>$</span>
+<span class=hs-linenum>126: </span>      <a class=annot href="#"><span class=annottext>{v : (Binomial.Tree a) | v == new
+                         &amp;&amp; lqdc##$select v == v
+                         &amp;&amp; root v == v
+                         &amp;&amp; treeElts v == Map_store (treeListElts (subtrees v)) (root v) (1 + Map_select (treeListElts (subtrees v)) (root v))
+                         &amp;&amp; treeRank v == rank v
+                         &amp;&amp; treeRank v &gt;= 0}</span><span class='hs-varid'>new</span></a>
+<span class=hs-linenum>127: </span>
+<span class=hs-linenum>128: </span>
+<span class=hs-linenum>129: </span><span class='hs-comment'>-- simple functions</span>
+<span class=hs-linenum>130: </span>
+<span class=hs-linenum>131: </span><span class='hs-keyword'>{-@</span> <span class='hs-varid'>measure</span> <span class='hs-varid'>size</span> <span class='hs-keyword'>@-}</span>
+<span class=hs-linenum>132: </span><span class='hs-keyword'>{-@</span> <span class='hs-varid'>size</span> <span class='hs-keyglyph'>::</span> <span class='hs-varid'>h</span><span class='hs-conop'>:</span><span class='hs-conid'>Heap</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-keyword'>{v:</span><span class='hs-conid'>Nat</span> <span class='hs-keyword'>| (len (unheap h) &lt;= v) &amp;&amp; (v = treeListSize (unheap h))}</span> <span class='hs-keyword'>@-}</span>
+<span class=hs-linenum>133: </span><span class='hs-definition'>size</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Heap</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Int</span>
+<span class=hs-linenum>134: </span><a class=annot href="#"><span class=annottext>forall a .
+x1:(Binomial.Heap a) -&gt; {VV : GHC.Types.Int | VV == size x1
+                                              &amp;&amp; VV == treeListSize (unheap x1)
+                                              &amp;&amp; VV &gt;= 0
+                                              &amp;&amp; len (unheap x1) &lt;= VV}</span><span class='hs-definition'>size</span></a> <span class='hs-layout'>(</span><span class='hs-conid'>Heap</span> <span class='hs-varid'>ts</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>forall a .
+x1:[(Binomial.Tree a)] -&gt; {VV : GHC.Types.Int | (VV == 0 &lt;=&gt; len x1 == 0)
+                                                &amp;&amp; VV == treeListSize x1
+                                                &amp;&amp; VV &gt;= 0
+                                                &amp;&amp; len x1 &lt;= VV}</span><span class='hs-varid'>treeListSize</span></a> <a class=annot href="#"><span class=annottext>{v : [(Binomial.Tree a)] | (treeListSize v == 0 &lt;=&gt; len v == 0)
+                           &amp;&amp; v == ts
+                           &amp;&amp; len v &gt;= 0
+                           &amp;&amp; treeListSize v &gt;= 0
+                           &amp;&amp; len v &lt;= treeListSize v}</span><span class='hs-varid'>ts</span></a>
+<span class=hs-linenum>135: </span>
+<span class=hs-linenum>136: </span><span class='hs-keyword'>{-@</span> <span class='hs-varid'>empty</span> <span class='hs-keyglyph'>::</span> <span class='hs-keyword'>{v:</span><span class='hs-conid'>Heap</span> <span class='hs-varid'>a</span> <span class='hs-keyword'>| HEltsSize v Bag.empty 0}</span> <span class='hs-keyword'>@-}</span>
+<span class=hs-linenum>137: </span><span class='hs-definition'>empty</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Heap</span> <span class='hs-varid'>a</span>
+<span class=hs-linenum>138: </span><a class=annot href="#"><span class=annottext>forall a .
+{v : (Binomial.Heap a) | elts v == Map_default 0
+                         &amp;&amp; size v == 0}</span><span class='hs-definition'>empty</span></a> <span class='hs-keyglyph'>=</span> <span class='hs-conid'>Heap</span> <a class=annot href="#"><span class=annottext>{VV : forall a &lt;p :: a a -&gt; Bool&gt;.
+      {v : [a]&lt;\x3 VV -&gt; {VV : a&lt;p x3&gt; | true}&gt; | v == []
+                                                  &amp;&amp; fromList v == Map_default 0
+                                                  &amp;&amp; len v == 0
+                                                  &amp;&amp; listElts v == Map_default 0
+                                                  &amp;&amp; treeListElts v == Map_default 0
+                                                  &amp;&amp; treeListSize v == 0} | VV == []}</span><span class='hs-conid'>[]</span></a>
+<span class=hs-linenum>139: </span>
+<span class=hs-linenum>140: </span><span class='hs-keyword'>{-@</span> <span class='hs-varid'>null</span> <span class='hs-keyglyph'>::</span> <span class='hs-varid'>h</span><span class='hs-conop'>:</span><span class='hs-layout'>(</span><span class='hs-conid'>Heap</span> <span class='hs-varid'>a</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-keyword'>{v:</span><span class='hs-conid'>Bool</span> <span class='hs-keyword'>| v &lt;=&gt; size h == 0}</span> <span class='hs-keyword'>@-}</span>
+<span class=hs-linenum>141: </span><span class='hs-definition'>null</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Heap</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Bool</span>
+<span class=hs-linenum>142: </span><a class=annot href="#"><span class=annottext>forall a .
+x1:(Binomial.Heap a) -&gt; {v : GHC.Types.Bool | v &lt;=&gt; size x1 == 0}</span><span class='hs-definition'>null</span></a> <a class=annot href="#"><span class=annottext>(Binomial.Heap a)</span><span class='hs-varid'>h</span></a> <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>{v : GHC.Types.Int | v == size h
+                     &amp;&amp; v == treeListSize (unheap h)
+                     &amp;&amp; v &gt;= 0
+                     &amp;&amp; len (unheap h) &lt;= v}</span><span class='hs-varid'>size</span></a> <a class=annot href="#"><span class=annottext>{v : (Binomial.Heap a) | v == h
+                         &amp;&amp; elts v == treeListElts (unheap v)
+                         &amp;&amp; size v == treeListSize (unheap v)
+                         &amp;&amp; size v &gt;= 0
+                         &amp;&amp; len (unheap v) &lt;= size v}</span><span class='hs-varid'>h</span></a> <span class='hs-varop'>==</span> <a class=annot href="#"><span class=annottext>GHC.Types.Int</span><span class='hs-num'>0</span></a>
+<span class=hs-linenum>143: </span>
+<span class=hs-linenum>144: </span>
+<span class=hs-linenum>145: </span><span class='hs-comment'>{-| Equality of heaps is determined by their elements -}</span>
+<span class=hs-linenum>146: </span><span class='hs-comment'>-- Todo toSortedList</span>
+<span class=hs-linenum>147: </span><span class='hs-comment'>{- 
+instance Ord a =&gt; Eq (Heap a) where
+  h1 == h2 = toSortedList h1 == toSortedList h2
+-}</span>
+<span class=hs-linenum>151: </span>
+<span class=hs-linenum>152: </span><span class='hs-keyword'>{-@</span> <span class='hs-varid'>singleton</span> <span class='hs-keyglyph'>::</span> <span class='hs-varid'>x</span><span class='hs-conop'>:</span><span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-keyword'>{v:</span><span class='hs-conid'>Heap</span> <span class='hs-varid'>a</span> <span class='hs-keyword'>| HEltsSize v (Bag.put x Bag.empty) 1}</span> <span class='hs-keyword'>@-}</span>
+<span class=hs-linenum>153: </span><span class='hs-definition'>singleton</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Ord</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>=&gt;</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Heap</span> <span class='hs-varid'>a</span>
+<span class=hs-linenum>154: </span><a class=annot href="#"><span class=annottext>forall a .
+(GHC.Classes.Ord&lt;[]&gt; a) =&gt;
+x2:a -&gt; {v : (Binomial.Heap a) | elts v == Map_store (Map_default 0) x2 (1 + Map_select (Map_default 0) x2)
+                                 &amp;&amp; size v == 1}</span><span class='hs-definition'>singleton</span></a> <a class=annot href="#"><span class=annottext>a</span><span class='hs-varid'>x</span></a> <span class='hs-keyglyph'>=</span> <span class='hs-conid'>Heap</span> <a class=annot href="#"><span class=annottext>[(Binomial.Tree a)]</span><span class='hs-keyglyph'>[</span></a><a class=annot href="#"><span class=annottext>{v : (Binomial.Tree a) | lqdc##$select v == x
+                         &amp;&amp; root v == x}</span><span class='hs-conid'>Node</span></a> <a class=annot href="#"><span class=annottext>{VV : a | VV == x}</span><span class='hs-varid'>x</span></a> <a class=annot href="#"><span class=annottext>GHC.Types.Int</span><span class='hs-num'>0</span></a> <a class=annot href="#"><span class=annottext>{VV : forall a &lt;p :: a a -&gt; Bool&gt;.
+      {v : [a]&lt;\x3 VV -&gt; {VV : a&lt;p x3&gt; | true}&gt; | v == []
+                                                  &amp;&amp; fromList v == Map_default 0
+                                                  &amp;&amp; len v == 0
+                                                  &amp;&amp; listElts v == Map_default 0
+                                                  &amp;&amp; treeListElts v == Map_default 0
+                                                  &amp;&amp; treeListSize v == 0} | VV == []}</span><span class='hs-conid'>[]</span></a> <a class=annot href="#"><span class=annottext>GHC.Types.Int</span><span class='hs-num'>1</span></a><span class='hs-keyglyph'>]</span>
+<span class=hs-linenum>155: </span>
+<span class=hs-linenum>156: </span><span class='hs-keyword'>{-@</span> <span class='hs-varid'>insert'</span> <span class='hs-keyglyph'>::</span> <span class='hs-varid'>t</span><span class='hs-conop'>:</span><span class='hs-conid'>Tree</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-varid'>ts</span><span class='hs-conop'>:</span><span class='hs-keyglyph'>[</span><span class='hs-conid'>Tree</span> <span class='hs-varid'>a</span><span class='hs-keyglyph'>]</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-keyword'>{v:</span><span class='hs-keyglyph'>[</span><span class='hs-conid'>Tree</span> <span class='hs-varid'>a</span><span class='hs-keyglyph'>]</span> <span class='hs-keyword'>| TsEltsSize v (Bag.union (treeElts t) (treeListElts ts)) (treeSize t + treeListSize ts) }</span>
+<span class=hs-linenum>157: </span><span class='hs-keyword'>@-}</span>
+<span class=hs-linenum>158: </span><span class='hs-definition'>insert'</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Ord</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>=&gt;</span> <span class='hs-conid'>Tree</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-keyglyph'>[</span><span class='hs-conid'>Tree</span> <span class='hs-varid'>a</span><span class='hs-keyglyph'>]</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-keyglyph'>[</span><span class='hs-conid'>Tree</span> <span class='hs-varid'>a</span><span class='hs-keyglyph'>]</span>
+<span class=hs-linenum>159: </span><a class=annot href="#"><span class=annottext>forall a .
+(GHC.Classes.Ord&lt;[]&gt; a) =&gt;
+x2:(Binomial.Tree a) -&gt; x3:[(Binomial.Tree a)] -&gt; {v : [(Binomial.Tree a)] | treeListElts v == Map_union (treeElts x2) (treeListElts x3)
+                                                                             &amp;&amp; treeListSize v == treeSize x2 + treeListSize x3}</span><span class='hs-definition'>insert'</span></a> <a class=annot href="#"><span class=annottext>(Binomial.Tree a)</span><span class='hs-varid'>t</span></a> <span class='hs-conid'>[]</span> <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>{v : [(Binomial.Tree a)] | v == []
+                           &amp;&amp; fromList v == Map_default 0
+                           &amp;&amp; len v == 0
+                           &amp;&amp; listElts v == Map_default 0
+                           &amp;&amp; treeListElts v == Map_default 0
+                           &amp;&amp; treeListSize v == 0}</span><span class='hs-keyglyph'>[</span></a><a class=annot href="#"><span class=annottext>{v : (Binomial.Tree a) | v == t
+                         &amp;&amp; treeElts v == Map_store (treeListElts (subtrees v)) (root v) (1 + Map_select (treeListElts (subtrees v)) (root v))
+                         &amp;&amp; treeRank v == rank v
+                         &amp;&amp; treeRank v &gt;= 0}</span><span class='hs-varid'>t</span></a><span class='hs-keyglyph'>]</span>
+<span class=hs-linenum>160: </span><span class='hs-definition'>insert'</span> <span class='hs-varid'>t</span> <span class='hs-varid'>ts</span><span class='hs-keyglyph'>@</span><span class='hs-layout'>(</span><span class='hs-varid'>t'</span><span class='hs-conop'>:</span><span class='hs-varid'>ts'</span><span class='hs-layout'>)</span>
+<span class=hs-linenum>161: </span>  <span class='hs-keyglyph'>|</span> <a class=annot href="#"><span class=annottext>{v : GHC.Types.Int | v == rank t
+                     &amp;&amp; v &gt;= 0}</span><span class='hs-varid'>rank</span></a> <a class=annot href="#"><span class=annottext>{v : (Binomial.Tree a) | v == t
+                         &amp;&amp; treeElts v == Map_store (treeListElts (subtrees v)) (root v) (1 + Map_select (treeListElts (subtrees v)) (root v))
+                         &amp;&amp; treeRank v == rank v
+                         &amp;&amp; treeRank v &gt;= 0}</span><span class='hs-varid'>t</span></a> <span class='hs-varop'>&lt;</span> <a class=annot href="#"><span class=annottext>{v : GHC.Types.Int | v == rank t'
+                     &amp;&amp; v &gt;= 0}</span><span class='hs-varid'>rank</span></a> <a class=annot href="#"><span class=annottext>{v : (Binomial.Tree a) | v == t'
+                         &amp;&amp; treeElts v == Map_store (treeListElts (subtrees v)) (root v) (1 + Map_select (treeListElts (subtrees v)) (root v))
+                         &amp;&amp; treeRank v == rank v
+                         &amp;&amp; treeRank v &gt;= 0}</span><span class='hs-varid'>t'</span></a> <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>{v : (Binomial.Tree a) | v == t
+                         &amp;&amp; treeElts v == Map_store (treeListElts (subtrees v)) (root v) (1 + Map_select (treeListElts (subtrees v)) (root v))
+                         &amp;&amp; treeRank v == rank v
+                         &amp;&amp; treeRank v &gt;= 0}</span><span class='hs-varid'>t</span></a> <span class='hs-conop'>:</span> <a class=annot href="#"><span class=annottext>{v : [(Binomial.Tree a)] | (treeListSize v == 0 &lt;=&gt; len v == 0)
+                           &amp;&amp; len v &gt;= 0
+                           &amp;&amp; treeListSize v &gt;= 0
+                           &amp;&amp; len v &lt;= treeListSize v}</span><span class='hs-varid'>ts</span></a>
+<span class=hs-linenum>162: </span>  <span class='hs-keyglyph'>|</span> <a class=annot href="#"><span class=annottext>{v : GHC.Types.Int | v == rank t
+                     &amp;&amp; v &gt;= 0}</span><span class='hs-varid'>rank</span></a> <a class=annot href="#"><span class=annottext>{v : (Binomial.Tree a) | v == t
+                         &amp;&amp; treeElts v == Map_store (treeListElts (subtrees v)) (root v) (1 + Map_select (treeListElts (subtrees v)) (root v))
+                         &amp;&amp; treeRank v == rank v
+                         &amp;&amp; treeRank v &gt;= 0}</span><span class='hs-varid'>t</span></a> <span class='hs-varop'>&gt;</span> <a class=annot href="#"><span class=annottext>{v : GHC.Types.Int | v == rank t'
+                     &amp;&amp; v &gt;= 0}</span><span class='hs-varid'>rank</span></a> <a class=annot href="#"><span class=annottext>{v : (Binomial.Tree a) | v == t'
+                         &amp;&amp; treeElts v == Map_store (treeListElts (subtrees v)) (root v) (1 + Map_select (treeListElts (subtrees v)) (root v))
+                         &amp;&amp; treeRank v == rank v
+                         &amp;&amp; treeRank v &gt;= 0}</span><span class='hs-varid'>t'</span></a> <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>{v : (Binomial.Tree a) | v == t'
+                         &amp;&amp; treeElts v == Map_store (treeListElts (subtrees v)) (root v) (1 + Map_select (treeListElts (subtrees v)) (root v))
+                         &amp;&amp; treeRank v == rank v
+                         &amp;&amp; treeRank v &gt;= 0}</span><span class='hs-varid'>t'</span></a> <span class='hs-conop'>:</span> <a class=annot href="#"><span class=annottext>{v : [(Binomial.Tree a)] | treeListElts v == Map_union (treeElts t) (treeListElts ts')
+                           &amp;&amp; treeListSize v == treeSize t + treeListSize ts'}</span><span class='hs-varid'>insert'</span></a> <a class=annot href="#"><span class=annottext>{v : (Binomial.Tree a) | v == t
+                         &amp;&amp; treeElts v == Map_store (treeListElts (subtrees v)) (root v) (1 + Map_select (treeListElts (subtrees v)) (root v))
+                         &amp;&amp; treeRank v == rank v
+                         &amp;&amp; treeRank v &gt;= 0}</span><span class='hs-varid'>t</span></a> <a class=annot href="#"><span class=annottext>{v : [(Binomial.Tree a)] | (treeListSize v == 0 &lt;=&gt; len v == 0)
+                           &amp;&amp; v == ts'
+                           &amp;&amp; len v &gt;= 0
+                           &amp;&amp; treeListSize v &gt;= 0
+                           &amp;&amp; len v &lt;= treeListSize v}</span><span class='hs-varid'>ts'</span></a>
+<span class=hs-linenum>163: </span>  <span class='hs-keyglyph'>|</span> <span class='hs-varid'>otherwise</span>       <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>forall a .
+(GHC.Classes.Ord&lt;[]&gt; a) =&gt;
+x2:(Binomial.Tree a) -&gt; x3:[(Binomial.Tree a)] -&gt; {v : [(Binomial.Tree a)] | treeListElts v == Map_union (treeElts x2) (treeListElts x3)
+                                                                             &amp;&amp; treeListSize v == treeSize x2 + treeListSize x3}</span><span class='hs-varid'>insert'</span></a> <a class=annot href="#"><span class=annottext>{v : (Binomial.Tree a) | rank v == rank t + 1
+                         &amp;&amp; treeElts v == Map_union (treeElts t) (treeElts t')
+                         &amp;&amp; treeSize v == treeSize t + treeSize t'}</span><span class='hs-layout'>(</span></a><span class='hs-varid'>link</span> <a class=annot href="#"><span class=annottext>{v : (Binomial.Tree a) | v == t
+                         &amp;&amp; treeElts v == Map_store (treeListElts (subtrees v)) (root v) (1 + Map_select (treeListElts (subtrees v)) (root v))
+                         &amp;&amp; treeRank v == rank v
+                         &amp;&amp; treeRank v &gt;= 0}</span><span class='hs-varid'>t</span></a> <a class=annot href="#"><span class=annottext>{v : (Binomial.Tree a) | v == t'
+                         &amp;&amp; treeElts v == Map_store (treeListElts (subtrees v)) (root v) (1 + Map_select (treeListElts (subtrees v)) (root v))
+                         &amp;&amp; treeRank v == rank v
+                         &amp;&amp; treeRank v &gt;= 0}</span><span class='hs-varid'>t'</span></a><span class='hs-layout'>)</span> <a class=annot href="#"><span class=annottext>{v : [(Binomial.Tree a)] | (treeListSize v == 0 &lt;=&gt; len v == 0)
+                           &amp;&amp; v == ts'
+                           &amp;&amp; len v &gt;= 0
+                           &amp;&amp; treeListSize v &gt;= 0
+                           &amp;&amp; len v &lt;= treeListSize v}</span><span class='hs-varid'>ts'</span></a>
+<span class=hs-linenum>164: </span>
+<span class=hs-linenum>165: </span><span class='hs-keyword'>{-@</span> <span class='hs-varid'>insert</span> <span class='hs-keyglyph'>::</span> <span class='hs-varid'>x</span><span class='hs-conop'>:</span><span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-varid'>h</span><span class='hs-conop'>:</span><span class='hs-conid'>Heap</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-keyword'>{v:</span><span class='hs-conid'>Heap</span> <span class='hs-varid'>a</span> <span class='hs-keyword'>| HEltsSize v (Bag.union (Bag.put x Bag.empty) (elts h)) (1 + size h)}</span> <span class='hs-keyword'>@-}</span>
+<span class=hs-linenum>166: </span><span class='hs-definition'>insert</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Ord</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>=&gt;</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Heap</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Heap</span> <span class='hs-varid'>a</span>
+<span class=hs-linenum>167: </span><a class=annot href="#"><span class=annottext>forall a .
+(GHC.Classes.Ord&lt;[]&gt; a) =&gt;
+x2:a -&gt; x3:(Binomial.Heap a) -&gt; {v : (Binomial.Heap a) | elts v == Map_union (Map_store (Map_default 0) x2 (1 + Map_select (Map_default 0) x2)) (elts x3)
+                                                         &amp;&amp; size v == 1 + size x3}</span><span class='hs-definition'>insert</span></a> <a class=annot href="#"><span class=annottext>a</span><span class='hs-varid'>x</span></a> <span class='hs-layout'>(</span><span class='hs-conid'>Heap</span> <span class='hs-varid'>ts</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>{VV : forall a .
+      x1:[(Binomial.Tree a)] -&gt; {v : (Binomial.Heap a) | v == Heap x1
+                                                         &amp;&amp; elts v == treeListElts x1
+                                                         &amp;&amp; lqdc##$select v == x1
+                                                         &amp;&amp; size v == treeListSize x1
+                                                         &amp;&amp; unheap v == x1} | VV == Heap}</span><span class='hs-conid'>Heap</span></a> <a class=annot href="#"><span class=annottext>[(Binomial.Tree a)]</span><span class='hs-layout'>(</span></a><span class='hs-varid'>insert'</span> <a class=annot href="#"><span class=annottext>{v : (Binomial.Tree a) | lqdc##$select v == x
+                         &amp;&amp; root v == x}</span><span class='hs-layout'>(</span></a><span class='hs-conid'>Node</span> <a class=annot href="#"><span class=annottext>{VV : a | VV == x}</span><span class='hs-varid'>x</span></a> <a class=annot href="#"><span class=annottext>GHC.Types.Int</span><span class='hs-num'>0</span></a> <a class=annot href="#"><span class=annottext>{VV : forall a &lt;p :: a a -&gt; Bool&gt;.
+      {v : [a]&lt;\x3 VV -&gt; {VV : a&lt;p x3&gt; | true}&gt; | v == []
+                                                  &amp;&amp; fromList v == Map_default 0
+                                                  &amp;&amp; len v == 0
+                                                  &amp;&amp; listElts v == Map_default 0
+                                                  &amp;&amp; treeListElts v == Map_default 0
+                                                  &amp;&amp; treeListSize v == 0} | VV == []}</span><span class='hs-conid'>[]</span></a> <a class=annot href="#"><span class=annottext>GHC.Types.Int</span><span class='hs-num'>1</span></a><span class='hs-layout'>)</span> <a class=annot href="#"><span class=annottext>{v : [(Binomial.Tree a)] | (treeListSize v == 0 &lt;=&gt; len v == 0)
+                           &amp;&amp; v == ts
+                           &amp;&amp; len v &gt;= 0
+                           &amp;&amp; treeListSize v &gt;= 0
+                           &amp;&amp; len v &lt;= treeListSize v}</span><span class='hs-varid'>ts</span></a><span class='hs-layout'>)</span>
+<span class=hs-linenum>168: </span>
+<span class=hs-linenum>169: </span>
+<span class=hs-linenum>170: </span><span class='hs-comment'>{- toSortedList -&gt; deleteMin -&gt; merge -&gt; merge' -&gt; link -}</span>
+<span class=hs-linenum>171: </span>
+<span class=hs-linenum>172: </span><span class='hs-keyword'>{-@</span> <span class='hs-varid'>deleteMin'</span> <span class='hs-keyglyph'>::</span> <span class='hs-varid'>xs</span><span class='hs-conop'>:</span><span class='hs-layout'>(</span><span class='hs-conid'>NEList</span> <span class='hs-layout'>(</span><span class='hs-conid'>Tree</span> <span class='hs-varid'>a</span><span class='hs-layout'>)</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-keyword'>{v:</span><span class='hs-layout'>(</span><span class='hs-conid'>Tree</span> <span class='hs-varid'>a</span><span class='hs-layout'>,</span> <span class='hs-keyglyph'>[</span><span class='hs-conid'>AtLeastTree</span> <span class='hs-varid'>a</span> <span class='hs-layout'>(</span><span class='hs-varid'>root</span> <span class='hs-layout'>(</span><span class='hs-varid'>fst</span> <span class='hs-varid'>v</span><span class='hs-layout'>)</span><span class='hs-layout'>)</span><span class='hs-keyglyph'>]</span><span class='hs-layout'>)</span> <span class='hs-keyword'>| Bag.union (treeElts (fst v)) (treeListElts (snd v)) = treeListElts xs &amp;&amp; treeSize (fst v) + treeListSize (snd v) = treeListSize xs}</span>
+<span class=hs-linenum>173: </span><span class='hs-keyword'>@-}</span>
+<span class=hs-linenum>174: </span><span class='hs-definition'>deleteMin'</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Ord</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>=&gt;</span> <span class='hs-keyglyph'>[</span><span class='hs-conid'>Tree</span> <span class='hs-varid'>a</span><span class='hs-keyglyph'>]</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-layout'>(</span><span class='hs-conid'>Tree</span> <span class='hs-varid'>a</span><span class='hs-layout'>,</span> <span class='hs-keyglyph'>[</span><span class='hs-conid'>Tree</span> <span class='hs-varid'>a</span><span class='hs-keyglyph'>]</span><span class='hs-layout'>)</span>
+<span class=hs-linenum>175: </span><a class=annot href="#"><span class=annottext>forall a .
+(GHC.Classes.Ord&lt;[]&gt; a) =&gt;
+x2:{VV : [(Binomial.Tree a)] | 0 &lt; len VV} -&gt; {v : ((Binomial.Tree a), [(Binomial.Tree {VV : a | root (fst v) &lt;= VV})]) | Map_union (treeElts (fst v)) (treeListElts (snd v)) == treeListElts x2
+                                                                                                                          &amp;&amp; treeSize (fst v) + treeListSize (snd v) == treeListSize x2}</span><span class='hs-definition'>deleteMin'</span></a> <span class='hs-keyglyph'>[</span><span class='hs-varid'>t</span><span class='hs-keyglyph'>]</span> <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>{v : [(Binomial.Tree a)] | v == []
+                           &amp;&amp; fromList v == Map_default 0
+                           &amp;&amp; len v == 0
+                           &amp;&amp; listElts v == Map_default 0
+                           &amp;&amp; treeListElts v == Map_default 0
+                           &amp;&amp; treeListSize v == 0}</span><span class='hs-layout'>(</span></a><a class=annot href="#"><span class=annottext>{v : (Binomial.Tree a) | v == t
+                         &amp;&amp; treeElts v == Map_store (treeListElts (subtrees v)) (root v) (1 + Map_select (treeListElts (subtrees v)) (root v))
+                         &amp;&amp; treeRank v == rank v
+                         &amp;&amp; treeRank v &gt;= 0}</span><span class='hs-varid'>t</span></a><span class='hs-layout'>,</span> <a class=annot href="#"><span class=annottext>{VV : forall a &lt;p :: a a -&gt; Bool&gt;.
+      {v : [a]&lt;\x3 VV -&gt; {VV : a&lt;p x3&gt; | true}&gt; | v == []
+                                                  &amp;&amp; fromList v == Map_default 0
+                                                  &amp;&amp; len v == 0
+                                                  &amp;&amp; listElts v == Map_default 0
+                                                  &amp;&amp; treeListElts v == Map_default 0
+                                                  &amp;&amp; treeListSize v == 0} | VV == []}</span><span class='hs-conid'>[]</span></a><span class='hs-layout'>)</span>                                                                       
+<span class=hs-linenum>176: </span><span class='hs-definition'>deleteMin'</span> <span class='hs-layout'>(</span><span class='hs-varid'>t</span><span class='hs-conop'>:</span><span class='hs-varid'>ts</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>=</span>
+<span class=hs-linenum>177: </span>  <span class='hs-keyword'>let</span> <span class='hs-layout'>(</span><a class=annot href="#"><span class=annottext>(Binomial.Tree a)</span><span class='hs-varid'>t'</span></a><span class='hs-layout'>,</span> <a class=annot href="#"><span class=annottext>{VV : [(Binomial.Tree {VV : a | root t' &lt;= VV})] | len VV &gt;= 0}</span><span class='hs-varid'>ts'</span></a><span class='hs-layout'>)</span> <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>forall a .
+(GHC.Classes.Ord&lt;[]&gt; a) =&gt;
+x2:{VV : [(Binomial.Tree a)] | 0 &lt; len VV} -&gt; {v : ((Binomial.Tree a), [(Binomial.Tree {VV : a | root (fst v) &lt;= VV})]) | Map_union (treeElts (fst v)) (treeListElts (snd v)) == treeListElts x2
+                                                                                                                          &amp;&amp; treeSize (fst v) + treeListSize (snd v) == treeListSize x2}</span><span class='hs-varid'>deleteMin'</span></a> <a class=annot href="#"><span class=annottext>{v : [(Binomial.Tree a)] | (treeListSize v == 0 &lt;=&gt; len v == 0)
+                           &amp;&amp; len v &gt;= 0
+                           &amp;&amp; treeListSize v &gt;= 0
+                           &amp;&amp; len v &lt;= treeListSize v}</span><span class='hs-varid'>ts</span></a> <span class='hs-keyword'>in</span>
+<span class=hs-linenum>178: </span>  <span class='hs-keyword'>if</span> <a class=annot href="#"><span class=annottext>{VV : a | VV == root t}</span><span class='hs-varid'>root</span></a> <a class=annot href="#"><span class=annottext>{v : (Binomial.Tree a) | v == t
+                         &amp;&amp; treeElts v == Map_store (treeListElts (subtrees v)) (root v) (1 + Map_select (treeListElts (subtrees v)) (root v))
+                         &amp;&amp; treeRank v == rank v
+                         &amp;&amp; treeRank v &gt;= 0}</span><span class='hs-varid'>t</span></a> <span class='hs-varop'>&lt;</span> <a class=annot href="#"><span class=annottext>{VV : a | VV == root t'}</span><span class='hs-varid'>root</span></a> <a class=annot href="#"><span class=annottext>{v : (Binomial.Tree a) | v == t'
+                         &amp;&amp; treeElts v == Map_store (treeListElts (subtrees v)) (root v) (1 + Map_select (treeListElts (subtrees v)) (root v))
+                         &amp;&amp; treeRank v == rank v
+                         &amp;&amp; treeRank v &gt;= 0}</span><span class='hs-varid'>t'</span></a>
+<span class=hs-linenum>179: </span>  <span class='hs-keyword'>then</span> <a class=annot href="#"><span class=annottext>{VV : forall a b &lt;p2 :: a b -&gt; Bool&gt;.
+      x1:a -&gt; x2:{VV : b&lt;p2 x1&gt; | true} -&gt; {v : (a, b)&lt;\x5 VV -&gt; {VV : b&lt;p2 x5&gt; | true}&gt; | v == (,) x1 x2
+                                                                                           &amp;&amp; fst v == x1
+                                                                                           &amp;&amp; lqdc##$select v == x1
+                                                                                           &amp;&amp; lqdc##$select v == x2
+                                                                                           &amp;&amp; snd v == x2
+                                                                                           &amp;&amp; x_Tuple21 v == x1
+                                                                                           &amp;&amp; x_Tuple22 v == x2} | VV == (,)}</span><span class='hs-layout'>(</span></a><a class=annot href="#"><span class=annottext>{v : (Binomial.Tree a) | v == t
+                         &amp;&amp; treeElts v == Map_store (treeListElts (subtrees v)) (root v) (1 + Map_select (treeListElts (subtrees v)) (root v))
+                         &amp;&amp; treeRank v == rank v
+                         &amp;&amp; treeRank v &gt;= 0}</span><span class='hs-varid'>t</span></a><span class='hs-layout'>,</span> <a class=annot href="#"><span class=annottext>{v : (Binomial.Tree {VV : a | root t' &lt;= VV}) | v == t'}</span><span class='hs-layout'>(</span></a><span class='hs-varid'>treeAtLeastRoot</span> <a class=annot href="#"><span class=annottext>{v : (Binomial.Tree a) | v == t'
+                         &amp;&amp; treeElts v == Map_store (treeListElts (subtrees v)) (root v) (1 + Map_select (treeListElts (subtrees v)) (root v))
+                         &amp;&amp; treeRank v == rank v
+                         &amp;&amp; treeRank v &gt;= 0}</span><span class='hs-varid'>t'</span></a><span class='hs-layout'>)</span><span class='hs-conop'>:</span><a class=annot href="#"><span class=annottext>{v : [(Binomial.Tree {VV : a | root t' &lt;= VV})] | (treeListSize v == 0 &lt;=&gt; len v == 0)
+                                                  &amp;&amp; v == ts'
+                                                  &amp;&amp; len v &gt;= 0
+                                                  &amp;&amp; treeListSize v &gt;= 0
+                                                  &amp;&amp; len v &lt;= treeListSize v}</span><span class='hs-varid'>ts'</span></a><span class='hs-layout'>)</span>
+<span class=hs-linenum>180: </span>  <span class='hs-keyword'>else</span> <a class=annot href="#"><span class=annottext>{VV : forall a b &lt;p2 :: a b -&gt; Bool&gt;.
+      x1:a -&gt; x2:{VV : b&lt;p2 x1&gt; | true} -&gt; {v : (a, b)&lt;\x5 VV -&gt; {VV : b&lt;p2 x5&gt; | true}&gt; | v == (,) x1 x2
+                                                                                           &amp;&amp; fst v == x1
+                                                                                           &amp;&amp; lqdc##$select v == x1
+                                                                                           &amp;&amp; lqdc##$select v == x2
+                                                                                           &amp;&amp; snd v == x2
+                                                                                           &amp;&amp; x_Tuple21 v == x1
+                                                                                           &amp;&amp; x_Tuple22 v == x2} | VV == (,)}</span><span class='hs-layout'>(</span></a><a class=annot href="#"><span class=annottext>{v : (Binomial.Tree a) | v == t'
+                         &amp;&amp; treeElts v == Map_store (treeListElts (subtrees v)) (root v) (1 + Map_select (treeListElts (subtrees v)) (root v))
+                         &amp;&amp; treeRank v == rank v
+                         &amp;&amp; treeRank v &gt;= 0}</span><span class='hs-varid'>t'</span></a><span class='hs-layout'>,</span> <a class=annot href="#"><span class=annottext>{v : (Binomial.Tree {VV : a | root t &lt;= VV}) | v == t}</span><span class='hs-layout'>(</span></a><span class='hs-varid'>treeAtLeastRoot</span> <a class=annot href="#"><span class=annottext>{v : (Binomial.Tree a) | v == t
+                         &amp;&amp; treeElts v == Map_store (treeListElts (subtrees v)) (root v) (1 + Map_select (treeListElts (subtrees v)) (root v))
+                         &amp;&amp; treeRank v == rank v
+                         &amp;&amp; treeRank v &gt;= 0}</span><span class='hs-varid'>t</span></a><span class='hs-layout'>)</span><span class='hs-conop'>:</span><a class=annot href="#"><span class=annottext>{v : [(Binomial.Tree {VV : a | root t' &lt;= VV})] | (treeListSize v == 0 &lt;=&gt; len v == 0)
+                                                  &amp;&amp; v == ts'
+                                                  &amp;&amp; len v &gt;= 0
+                                                  &amp;&amp; treeListSize v &gt;= 0
+                                                  &amp;&amp; len v &lt;= treeListSize v}</span><span class='hs-varid'>ts'</span></a><span class='hs-layout'>)</span>
+<span class=hs-linenum>181: </span>
+<span class=hs-linenum>182: </span><span class='hs-comment'>--helpers for deleteMin</span>
+<span class=hs-linenum>183: </span><span class='hs-keyword'>{-@</span> <span class='hs-varid'>unheapNonempty</span> <span class='hs-keyglyph'>::</span> <span class='hs-varid'>h</span><span class='hs-conop'>:</span><span class='hs-conid'>NEHeap</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-keyword'>{v:</span><span class='hs-conid'>NEList</span> <span class='hs-layout'>(</span><span class='hs-conid'>Tree</span> <span class='hs-varid'>a</span><span class='hs-layout'>)</span> <span class='hs-keyword'>| TsEltsSize v (elts h) (size h)}</span> <span class='hs-keyword'>@-}</span>
+<span class=hs-linenum>184: </span><span class='hs-definition'>unheapNonempty</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Heap</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-keyglyph'>[</span><span class='hs-conid'>Tree</span> <span class='hs-varid'>a</span><span class='hs-keyglyph'>]</span>
+<span class=hs-linenum>185: </span><a class=annot href="#"><span class=annottext>forall a .
+x1:{VV : (Binomial.Heap a) | 0 &lt; len (unheap VV)} -&gt; {VV : [(Binomial.Tree a)] | treeListElts VV == elts x1
+                                                                                 &amp;&amp; treeListSize VV == size x1
+                                                                                 &amp;&amp; 0 &lt; len VV}</span><span class='hs-definition'>unheapNonempty</span></a> <span class='hs-layout'>(</span><span class='hs-conid'>Heap</span> <span class='hs-varid'>ts</span><span class='hs-keyglyph'>@</span><span class='hs-layout'>(</span><span class='hs-keyword'>_</span><span class='hs-conop'>:</span><span class='hs-keyword'>_</span><span class='hs-layout'>)</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>{v : [(Binomial.Tree a)] | (treeListSize v == 0 &lt;=&gt; len v == 0)
+                           &amp;&amp; v == ts
+                           &amp;&amp; len v &gt;= 0
+                           &amp;&amp; treeListSize v &gt;= 0
+                           &amp;&amp; len v &lt;= treeListSize v}</span><span class='hs-varid'>ts</span></a>
+<span class=hs-linenum>186: </span>
+<span class=hs-linenum>187: </span><span class='hs-keyword'>{-@</span> <span class='hs-varid'>subtreeEltsAreEltsOfTree</span> <span class='hs-keyglyph'>::</span> <span class='hs-varid'>t</span><span class='hs-conop'>:</span><span class='hs-conid'>Tree</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-keyword'>{v:</span><span class='hs-keyglyph'>[</span><span class='hs-conid'>Tree</span> <span class='hs-varid'>a</span><span class='hs-keyglyph'>]</span> <span class='hs-keyword'>| Bag.union (Bag.put (root t) Bag.empty) (treeListElts v) = treeElts t &amp;&amp; 1 + treeListSize v = treeSize t}</span> <span class='hs-keyword'>@-}</span>
+<span class=hs-linenum>188: </span><span class='hs-definition'>subtreeEltsAreEltsOfTree</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Tree</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-keyglyph'>[</span><span class='hs-conid'>Tree</span> <span class='hs-varid'>a</span><span class='hs-keyglyph'>]</span>
+<span class=hs-linenum>189: </span><a class=annot href="#"><span class=annottext>forall a .
+x1:(Binomial.Tree a) -&gt; {v : [(Binomial.Tree a)] | Map_union (Map_store (Map_default 0) (root x1) (1 + Map_select (Map_default 0) (root x1))) (treeListElts v) == treeElts x1
+                                                   &amp;&amp; 1 + treeListSize v == treeSize x1}</span><span class='hs-definition'>subtreeEltsAreEltsOfTree</span></a> <span class='hs-layout'>(</span><span class='hs-conid'>Node</span> <span class='hs-keyword'>_</span> <span class='hs-keyword'>_</span> <span class='hs-conid'>[]</span> <span class='hs-keyword'>_</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>{VV : forall a &lt;p :: a a -&gt; Bool&gt;.
+      {v : [a]&lt;\x3 VV -&gt; {VV : a&lt;p x3&gt; | true}&gt; | v == []
+                                                  &amp;&amp; fromList v == Map_default 0
+                                                  &amp;&amp; len v == 0
+                                                  &amp;&amp; listElts v == Map_default 0
+                                                  &amp;&amp; treeListElts v == Map_default 0
+                                                  &amp;&amp; treeListSize v == 0} | VV == []}</span><span class='hs-conid'>[]</span></a>
+<span class=hs-linenum>190: </span><span class='hs-definition'>subtreeEltsAreEltsOfTree</span> <span class='hs-layout'>(</span><span class='hs-conid'>Node</span> <span class='hs-varid'>x</span> <span class='hs-varid'>r</span> <span class='hs-varid'>tts</span><span class='hs-keyglyph'>@</span><span class='hs-layout'>(</span><span class='hs-keyword'>_</span><span class='hs-conop'>:</span><span class='hs-varid'>ts</span><span class='hs-layout'>)</span> <span class='hs-varid'>sz</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>=</span>
+<span class=hs-linenum>191: </span>    <span class='hs-keyword'>let</span> <a class=annot href="#"><span class=annottext>(Binomial.Tree a)</span><span class='hs-varid'>t</span></a> <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>(Binomial.Tree a)</span><span class='hs-varid'>rankOfFirstTree</span></a> <a class=annot href="#"><span class=annottext>{v : [(Binomial.Tree a)]&lt;\x5 VV -&gt; {v : (Binomial.Tree a) | treeRank v &gt; treeRank v}&gt; | (treeListSize v == 0 &lt;=&gt; len v == 0)
+                                                                                        &amp;&amp; len v &gt;= 0
+                                                                                        &amp;&amp; treeListSize v &gt;= 0
+                                                                                        &amp;&amp; len v &lt;= treeListSize v}</span><span class='hs-varid'>tts</span></a> <span class='hs-keyword'>in</span>
+<span class=hs-linenum>192: </span>    <a class=annot href="#"><span class=annottext>x1:[(Binomial.Tree a)] -&gt; {v : [(Binomial.Tree a)] | v == x1}</span><span class='hs-varid'>assert</span></a> <a class=annot href="#"><span class=annottext>GHC.Types.Bool</span><span class='hs-layout'>(</span></a><a class=annot href="#"><span class=annottext>{v : GHC.Types.Int | v == rank t
+                     &amp;&amp; v == treeRank t
+                     &amp;&amp; v &gt;= 0}</span><span class='hs-varid'>treeRank</span></a> <a class=annot href="#"><span class=annottext>{v : (Binomial.Tree a) | v == t
+                         &amp;&amp; treeElts v == Map_store (treeListElts (subtrees v)) (root v) (1 + Map_select (treeListElts (subtrees v)) (root v))
+                         &amp;&amp; treeRank v == rank v
+                         &amp;&amp; treeRank v &gt;= 0}</span><span class='hs-varid'>t</span></a> <span class='hs-varop'>==</span> <a class=annot href="#"><span class=annottext>{v : GHC.Types.Int | v &gt;= 0}</span><span class='hs-varid'>r</span></a> <span class='hs-comment'>-</span> <a class=annot href="#"><span class=annottext>GHC.Types.Int</span><span class='hs-num'>1</span></a><span class='hs-layout'>)</span> <span class='hs-varop'>$</span>
+<span class=hs-linenum>193: </span>    <span class='hs-keyword'>let</span> <a class=annot href="#"><span class=annottext>{v : (Binomial.Tree a) | lqdc##$select v == ts
+                         &amp;&amp; subtrees v == ts}</span><span class='hs-varid'>residual</span></a> <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>{v : (Binomial.Tree a) | lqdc##$select v == ts
+                         &amp;&amp; subtrees v == ts}</span><span class='hs-conid'>Node</span></a> <a class=annot href="#"><span class=annottext>a</span><span class='hs-varid'>x</span></a> <a class=annot href="#"><span class=annottext>GHC.Types.Int</span><span class='hs-layout'>(</span></a><a class=annot href="#"><span class=annottext>{v : GHC.Types.Int | v &gt;= 0}</span><span class='hs-varid'>r</span></a> <span class='hs-comment'>-</span> <a class=annot href="#"><span class=annottext>GHC.Types.Int</span><span class='hs-num'>1</span></a><span class='hs-layout'>)</span> <a class=annot href="#"><span class=annottext>{v : [(Binomial.Tree a)]&lt;\x5 VV -&gt; {v : (Binomial.Tree a) | treeRank v &gt; treeRank v}&gt; | (treeListSize v == 0 &lt;=&gt; len v == 0)
+                                                                                        &amp;&amp; v == ts
+                                                                                        &amp;&amp; len v &gt;= 0
+                                                                                        &amp;&amp; treeListSize v &gt;= 0
+                                                                                        &amp;&amp; len v &lt;= treeListSize v}</span><span class='hs-varid'>ts</span></a> <a class=annot href="#"><span class=annottext>GHC.Types.Int</span><span class='hs-layout'>(</span></a><a class=annot href="#"><span class=annottext>{v : GHC.Types.Int | v &gt;= 1}</span><span class='hs-varid'>sz</span></a> <span class='hs-comment'>-</span> <a class=annot href="#"><span class=annottext>{v : GHC.Types.Int | v == treeSize t
+                     &amp;&amp; v == 1 + treeListSize (subtrees t)
+                     &amp;&amp; v &gt;= 1}</span><span class='hs-layout'>(</span></a><span class='hs-varid'>treeSize</span> <a class=annot href="#"><span class=annottext>{v : (Binomial.Tree a) | v == t
+                         &amp;&amp; treeElts v == Map_store (treeListElts (subtrees v)) (root v) (1 + Map_select (treeListElts (subtrees v)) (root v))
+                         &amp;&amp; treeRank v == rank v
+                         &amp;&amp; treeRank v &gt;= 0}</span><span class='hs-varid'>t</span></a><span class='hs-layout'>)</span><span class='hs-layout'>)</span> <span class='hs-keyword'>in</span>
+<span class=hs-linenum>194: </span>    <a class=annot href="#"><span class=annottext>{v : (Binomial.Tree a) | v == t
+                         &amp;&amp; treeElts v == Map_store (treeListElts (subtrees v)) (root v) (1 + Map_select (treeListElts (subtrees v)) (root v))
+                         &amp;&amp; treeRank v == rank v
+                         &amp;&amp; treeRank v &gt;= 0}</span><span class='hs-varid'>t</span></a> <span class='hs-conop'>:</span> <a class=annot href="#"><span class=annottext>{v : [(Binomial.Tree a)] | Map_union (Map_store (Map_default 0) (root residual) (1 + Map_select (Map_default 0) (root residual))) (treeListElts v) == treeElts residual
+                           &amp;&amp; 1 + treeListSize v == treeSize residual}</span><span class='hs-varid'>subtreeEltsAreEltsOfTree</span></a> <a class=annot href="#"><span class=annottext>{v : (Binomial.Tree a) | v == residual
+                         &amp;&amp; lqdc##$select v == ts
+                         &amp;&amp; subtrees v == ts
+                         &amp;&amp; treeElts v == Map_store (treeListElts (subtrees v)) (root v) (1 + Map_select (treeListElts (subtrees v)) (root v))
+                         &amp;&amp; treeRank v == rank v
+                         &amp;&amp; treeRank v &gt;= 0}</span><span class='hs-varid'>residual</span></a>
+<span class=hs-linenum>195: </span>
+<span class=hs-linenum>196: </span><span class='hs-keyword'>{-@</span> <span class='hs-varid'>reverseHeapList</span> <span class='hs-keyglyph'>::</span> <span class='hs-varid'>ts</span><span class='hs-conop'>:</span><span class='hs-keyglyph'>[</span><span class='hs-conid'>Tree</span> <span class='hs-varid'>a</span><span class='hs-keyglyph'>]</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-keyword'>{v:</span><span class='hs-keyglyph'>[</span><span class='hs-conid'>Tree</span> <span class='hs-varid'>a</span><span class='hs-keyglyph'>]</span> <span class='hs-keyword'>| TsEltsSize v (treeListElts ts) (treeListSize ts)}</span> <span class='hs-keyword'>@-}</span>
+<span class=hs-linenum>197: </span><span class='hs-definition'>reverseHeapList</span> <span class='hs-keyglyph'>::</span> <span class='hs-keyglyph'>[</span><span class='hs-conid'>Tree</span> <span class='hs-varid'>a</span><span class='hs-keyglyph'>]</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-keyglyph'>[</span><span class='hs-conid'>Tree</span> <span class='hs-varid'>a</span><span class='hs-keyglyph'>]</span>
+<span class=hs-linenum>198: </span><a class=annot href="#"><span class=annottext>forall a .
+x1:[(Binomial.Tree a)] -&gt; {v : [(Binomial.Tree a)] | treeListElts v == treeListElts x1
+                                                     &amp;&amp; treeListSize v == treeListSize x1}</span><span class='hs-definition'>reverseHeapList</span></a> <a class=annot href="#"><span class=annottext>[(Binomial.Tree a)]</span><span class='hs-varid'>ts</span></a> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>reverseHeapListAux</span> <a class=annot href="#"><span class=annottext>{v : [(Binomial.Tree a)] | (treeListSize v == 0 &lt;=&gt; len v == 0)
+                           &amp;&amp; v == ts
+                           &amp;&amp; len v &gt;= 0
+                           &amp;&amp; treeListSize v &gt;= 0
+                           &amp;&amp; len v &lt;= treeListSize v}</span><span class='hs-varid'>ts</span></a> <a class=annot href="#"><span class=annottext>{VV : forall a &lt;p :: a a -&gt; Bool&gt;.
+      {v : [a]&lt;\x3 VV -&gt; {VV : a&lt;p x3&gt; | true}&gt; | v == []
+                                                  &amp;&amp; fromList v == Map_default 0
+                                                  &amp;&amp; len v == 0
+                                                  &amp;&amp; listElts v == Map_default 0
+                                                  &amp;&amp; treeListElts v == Map_default 0
+                                                  &amp;&amp; treeListSize v == 0} | VV == []}</span><span class='hs-conid'>[]</span></a>
+<span class=hs-linenum>199: </span>
+<span class=hs-linenum>200: </span><span class='hs-keyword'>{-@</span> <span class='hs-varid'>reverseHeapListAux</span> <span class='hs-keyglyph'>::</span> <span class='hs-varid'>ts</span><span class='hs-conop'>:</span><span class='hs-keyglyph'>[</span><span class='hs-conid'>Tree</span> <span class='hs-varid'>a</span><span class='hs-keyglyph'>]</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-varid'>acc</span><span class='hs-conop'>:</span><span class='hs-keyglyph'>[</span><span class='hs-conid'>Tree</span> <span class='hs-varid'>a</span><span class='hs-keyglyph'>]</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-keyword'>{v:</span><span class='hs-keyglyph'>[</span><span class='hs-conid'>Tree</span> <span class='hs-varid'>a</span><span class='hs-keyglyph'>]</span> <span class='hs-keyword'>| TsEltsSize v (
+                  Bag.union (treeListElts ts) (treeListElts acc))(
+                  treeListSize ts + treeListSize acc)}</span>
+<span class=hs-linenum>203: </span><span class='hs-keyword'>@-}</span>
+<span class=hs-linenum>204: </span><span class='hs-definition'>reverseHeapListAux</span> <span class='hs-keyglyph'>::</span> <span class='hs-keyglyph'>[</span><span class='hs-conid'>Tree</span> <span class='hs-varid'>a</span><span class='hs-keyglyph'>]</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-keyglyph'>[</span><span class='hs-conid'>Tree</span> <span class='hs-varid'>a</span><span class='hs-keyglyph'>]</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-keyglyph'>[</span><span class='hs-conid'>Tree</span> <span class='hs-varid'>a</span><span class='hs-keyglyph'>]</span>
+<span class=hs-linenum>205: </span><a class=annot href="#"><span class=annottext>forall a .
+x1:[(Binomial.Tree a)] -&gt; x2:[(Binomial.Tree a)] -&gt; {v : [(Binomial.Tree a)] | treeListElts v == Map_union (treeListElts x1) (treeListElts x2)
+                                                                               &amp;&amp; treeListSize v == treeListSize x1 + treeListSize x2}</span><span class='hs-definition'>reverseHeapListAux</span></a> <span class='hs-conid'>[]</span> <a class=annot href="#"><span class=annottext>[(Binomial.Tree a)]</span><span class='hs-varid'>acc</span></a> <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>{v : [(Binomial.Tree a)] | (treeListSize v == 0 &lt;=&gt; len v == 0)
+                           &amp;&amp; v == acc
+                           &amp;&amp; len v &gt;= 0
+                           &amp;&amp; treeListSize v &gt;= 0
+                           &amp;&amp; len v &lt;= treeListSize v}</span><span class='hs-varid'>acc</span></a>
+<span class=hs-linenum>206: </span><span class='hs-definition'>reverseHeapListAux</span> <span class='hs-layout'>(</span><span class='hs-varid'>t</span><span class='hs-conop'>:</span><span class='hs-varid'>ts</span><span class='hs-layout'>)</span> <span class='hs-varid'>acc</span> <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>forall a .
+x1:[(Binomial.Tree a)] -&gt; x2:[(Binomial.Tree a)] -&gt; {v : [(Binomial.Tree a)] | treeListElts v == Map_union (treeListElts x1) (treeListElts x2)
+                                                                               &amp;&amp; treeListSize v == treeListSize x1 + treeListSize x2}</span><span class='hs-varid'>reverseHeapListAux</span></a> <a class=annot href="#"><span class=annottext>{v : [(Binomial.Tree a)] | (treeListSize v == 0 &lt;=&gt; len v == 0)
+                           &amp;&amp; v == ts
+                           &amp;&amp; len v &gt;= 0
+                           &amp;&amp; treeListSize v &gt;= 0
+                           &amp;&amp; len v &lt;= treeListSize v}</span><span class='hs-varid'>ts</span></a> <a class=annot href="#"><span class=annottext>{v : [(Binomial.Tree a)] | v == : t acc
+                           &amp;&amp; fromList v == Map_store (fromList acc) t (1 + Map_select (fromList acc) t)
+                           &amp;&amp; head v == t
+                           &amp;&amp; len v == 1 + len acc
+                           &amp;&amp; listElts v == Map_union (Map_store (Map_default 0) t (1 + Map_select (Map_default 0) t)) (listElts acc)
+                           &amp;&amp; lqdc##$select v == acc
+                           &amp;&amp; lqdc##$select v == t
+                           &amp;&amp; tail v == acc
+                           &amp;&amp; treeListElts v == Map_union (treeElts t) (treeListElts acc)
+                           &amp;&amp; treeListSize v == treeSize t + treeListSize acc}</span><span class='hs-layout'>(</span></a><a class=annot href="#"><span class=annottext>{v : (Binomial.Tree a) | v == t
+                         &amp;&amp; treeElts v == Map_store (treeListElts (subtrees v)) (root v) (1 + Map_select (treeListElts (subtrees v)) (root v))
+                         &amp;&amp; treeRank v == rank v
+                         &amp;&amp; treeRank v &gt;= 0}</span><span class='hs-varid'>t</span></a><span class='hs-conop'>:</span><a class=annot href="#"><span class=annottext>{v : [(Binomial.Tree a)] | (treeListSize v == 0 &lt;=&gt; len v == 0)
+                           &amp;&amp; v == acc
+                           &amp;&amp; len v &gt;= 0
+                           &amp;&amp; treeListSize v &gt;= 0
+                           &amp;&amp; len v &lt;= treeListSize v}</span><span class='hs-varid'>acc</span></a><span class='hs-layout'>)</span>
+<span class=hs-linenum>207: </span>
+<span class=hs-linenum>208: </span><span class='hs-keyword'>{-@</span> <span class='hs-varid'>deleteMin</span> <span class='hs-keyglyph'>::</span> <span class='hs-varid'>h</span><span class='hs-conop'>:</span><span class='hs-conid'>NEHeap</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-keyword'>{v:</span><span class='hs-layout'>(</span><span class='hs-varid'>a</span><span class='hs-layout'>,</span> <span class='hs-conid'>Heap</span> <span class='hs-keyword'>{x:</span><span class='hs-definition'>a</span> <span class='hs-keyword'>| (fst v) &lt;= x}</span><span class='hs-layout'>)</span> <span class='hs-keyword'>| Bag.union (Bag.put (fst v) Bag.empty) (elts (snd v)) = elts h &amp;&amp; 1 + size (snd v) = size h}</span> <span class='hs-keyword'>@-}</span>
+<span class=hs-linenum>209: </span><span class='hs-definition'>deleteMin</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Ord</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>=&gt;</span> <span class='hs-conid'>Heap</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-layout'>(</span><span class='hs-varid'>a</span><span class='hs-layout'>,</span> <span class='hs-conid'>Heap</span> <span class='hs-varid'>a</span><span class='hs-layout'>)</span>
+<span class=hs-linenum>210: </span><a class=annot href="#"><span class=annottext>forall a .
+(GHC.Classes.Ord&lt;[]&gt; a) =&gt;
+x2:{VV : (Binomial.Heap a) | 0 &lt; len (unheap VV)} -&gt; {v : (a, (Binomial.Heap {VV : a | fst v &lt;= VV})) | Map_union (Map_store (Map_default 0) (fst v) (1 + Map_select (Map_default 0) (fst v))) (elts (snd v)) == elts x2
+                                                                                                        &amp;&amp; 1 + size (snd v) == size x2}</span><span class='hs-definition'>deleteMin</span></a> <a class=annot href="#"><span class=annottext>{VV : (Binomial.Heap a) | 0 &lt; len (unheap VV)}</span><span class='hs-varid'>h</span></a> <span class='hs-keyglyph'>=</span>
+<span class=hs-linenum>211: </span>  <span class='hs-keyword'>let</span> <span class='hs-layout'>(</span><a class=annot href="#"><span class=annottext>(Binomial.Tree a)</span><span class='hs-varid'>t</span></a><span class='hs-layout'>,</span> <a class=annot href="#"><span class=annottext>{VV : [(Binomial.Tree {VV : a | root t &lt;= VV})] | len VV &gt;= 0}</span><span class='hs-varid'>ts2</span></a><span class='hs-layout'>)</span> <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>forall a .
+(GHC.Classes.Ord&lt;[]&gt; a) =&gt;
+x2:{VV : [(Binomial.Tree a)] | 0 &lt; len VV} -&gt; {v : ((Binomial.Tree a), [(Binomial.Tree {VV : a | root (fst v) &lt;= VV})]) | Map_union (treeElts (fst v)) (treeListElts (snd v)) == treeListElts x2
+                                                                                                                          &amp;&amp; treeSize (fst v) + treeListSize (snd v) == treeListSize x2}</span><span class='hs-varid'>deleteMin'</span></a> <a class=annot href="#"><span class=annottext>{v : [(Binomial.Tree a)] | treeListElts v == elts h
+                           &amp;&amp; treeListSize v == size h
+                           &amp;&amp; 0 &lt; len v}</span><span class='hs-layout'>(</span></a><span class='hs-varid'>unheapNonempty</span> <a class=annot href="#"><span class=annottext>{v : (Binomial.Heap a) | v == h
+                         &amp;&amp; elts v == treeListElts (unheap v)
+                         &amp;&amp; size v == treeListSize (unheap v)
+                         &amp;&amp; size v &gt;= 0
+                         &amp;&amp; 0 &lt; len (unheap v)
+                         &amp;&amp; len (unheap v) &lt;= size v}</span><span class='hs-varid'>h</span></a><span class='hs-layout'>)</span> <span class='hs-keyword'>in</span>
+<span class=hs-linenum>212: </span>  <span class='hs-keyword'>let</span> <a class=annot href="#"><span class=annottext>[(Binomial.Tree a)]</span><span class='hs-varid'>ts1</span></a> <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>[(Binomial.Tree a)]</span><span class='hs-varid'>subtreeEltsAreEltsOfTree</span></a> <a class=annot href="#"><span class=annottext>{v : (Binomial.Tree {VV : a | root t &lt;= VV}) | v == t}</span><span class='hs-layout'>(</span></a><span class='hs-varid'>treeAtLeastRoot</span> <a class=annot href="#"><span class=annottext>{v : (Binomial.Tree a) | v == t
+                         &amp;&amp; treeElts v == Map_store (treeListElts (subtrees v)) (root v) (1 + Map_select (treeListElts (subtrees v)) (root v))
+                         &amp;&amp; treeRank v == rank v
+                         &amp;&amp; treeRank v &gt;= 0}</span><span class='hs-varid'>t</span></a><span class='hs-layout'>)</span> <span class='hs-keyword'>in</span>
+<span class=hs-linenum>213: </span>  <span class='hs-layout'>(</span><a class=annot href="#"><span class=annottext>{VV : a | VV == root t}</span><span class='hs-varid'>root</span></a> <a class=annot href="#"><span class=annottext>{v : (Binomial.Tree a) | v == t
+                         &amp;&amp; treeElts v == Map_store (treeListElts (subtrees v)) (root v) (1 + Map_select (treeListElts (subtrees v)) (root v))
+                         &amp;&amp; treeRank v == rank v
+                         &amp;&amp; treeRank v &gt;= 0}</span><span class='hs-varid'>t</span></a><span class='hs-layout'>,</span> <a class=annot href="#"><span class=annottext>(Binomial.Heap a)</span><span class='hs-conid'>Heap</span></a> <a class=annot href="#"><span class=annottext>[(Binomial.Tree a)]</span><span class='hs-layout'>(</span></a><span class='hs-varid'>merge'</span> <a class=annot href="#"><span class=annottext>{v : [(Binomial.Tree a)] | treeListElts v == treeListElts ts1
+                           &amp;&amp; treeListSize v == treeListSize ts1}</span><span class='hs-layout'>(</span></a><span class='hs-varid'>reverseHeapList</span> <a class=annot href="#"><span class=annottext>{v : [(Binomial.Tree a)] | (treeListSize v == 0 &lt;=&gt; len v == 0)
+                           &amp;&amp; v == ts1
+                           &amp;&amp; len v &gt;= 0
+                           &amp;&amp; treeListSize v &gt;= 0
+                           &amp;&amp; len v &lt;= treeListSize v}</span><span class='hs-varid'>ts1</span></a><span class='hs-layout'>)</span> <a class=annot href="#"><span class=annottext>{v : [(Binomial.Tree {VV : a | root t &lt;= VV})] | (treeListSize v == 0 &lt;=&gt; len v == 0)
+                                                 &amp;&amp; v == ts2
+                                                 &amp;&amp; len v &gt;= 0
+                                                 &amp;&amp; treeListSize v &gt;= 0
+                                                 &amp;&amp; len v &lt;= treeListSize v}</span><span class='hs-varid'>ts2</span></a><span class='hs-layout'>)</span><span class='hs-layout'>)</span>
+<span class=hs-linenum>214: </span>
+<span class=hs-linenum>215: </span><span class='hs-comment'>-- merge</span>
+<span class=hs-linenum>216: </span>
+<span class=hs-linenum>217: </span><span class='hs-keyword'>{-@</span> <span class='hs-varid'>merge</span> <span class='hs-keyglyph'>::</span> <span class='hs-varid'>h1</span><span class='hs-conop'>:</span><span class='hs-conid'>Heap</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-varid'>h2</span><span class='hs-conop'>:</span><span class='hs-conid'>Heap</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-keyword'>{v:</span><span class='hs-conid'>Heap</span> <span class='hs-varid'>a</span> <span class='hs-keyword'>| HEltsSize v (Bag.union (elts h1) (elts h2)) (size h1 + size h2)}</span> <span class='hs-keyword'>@-}</span>
+<span class=hs-linenum>218: </span><span class='hs-definition'>merge</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Ord</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>=&gt;</span> <span class='hs-conid'>Heap</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Heap</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Heap</span> <span class='hs-varid'>a</span>
+<span class=hs-linenum>219: </span><a class=annot href="#"><span class=annottext>forall a .
+(GHC.Classes.Ord&lt;[]&gt; a) =&gt;
+x2:(Binomial.Heap a) -&gt; x3:(Binomial.Heap a) -&gt; {v : (Binomial.Heap a) | elts v == Map_union (elts x2) (elts x3)
+                                                                         &amp;&amp; size v == size x2 + size x3}</span><span class='hs-definition'>merge</span></a> <span class='hs-layout'>(</span><span class='hs-conid'>Heap</span> <span class='hs-varid'>ts1</span><span class='hs-layout'>)</span> <span class='hs-layout'>(</span><span class='hs-conid'>Heap</span> <span class='hs-varid'>ts2</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>{VV : forall a .
+      x1:[(Binomial.Tree a)] -&gt; {v : (Binomial.Heap a) | v == Heap x1
+                                                         &amp;&amp; elts v == treeListElts x1
+                                                         &amp;&amp; lqdc##$select v == x1
+                                                         &amp;&amp; size v == treeListSize x1
+                                                         &amp;&amp; unheap v == x1} | VV == Heap}</span><span class='hs-conid'>Heap</span></a> <a class=annot href="#"><span class=annottext>{v : [(Binomial.Tree a)] | treeListElts v == Map_union (treeListElts ts1) (treeListElts ts2)
+                           &amp;&amp; treeListSize v == treeListSize ts1 + treeListSize ts2}</span><span class='hs-layout'>(</span></a><span class='hs-varid'>merge'</span> <a class=annot href="#"><span class=annottext>{v : [(Binomial.Tree a)] | (treeListSize v == 0 &lt;=&gt; len v == 0)
+                           &amp;&amp; v == ts1
+                           &amp;&amp; len v &gt;= 0
+                           &amp;&amp; treeListSize v &gt;= 0
+                           &amp;&amp; len v &lt;= treeListSize v}</span><span class='hs-varid'>ts1</span></a> <a class=annot href="#"><span class=annottext>{v : [(Binomial.Tree a)] | (treeListSize v == 0 &lt;=&gt; len v == 0)
+                           &amp;&amp; v == ts2
+                           &amp;&amp; len v &gt;= 0
+                           &amp;&amp; treeListSize v &gt;= 0
+                           &amp;&amp; len v &lt;= treeListSize v}</span><span class='hs-varid'>ts2</span></a><span class='hs-layout'>)</span>
+<span class=hs-linenum>220: </span>
+<span class=hs-linenum>221: </span>
+<span class=hs-linenum>222: </span><span class='hs-keyword'>{-@</span> <span class='hs-varid'>merge'</span> <span class='hs-keyglyph'>::</span> <span class='hs-varid'>ts1</span><span class='hs-conop'>:</span><span class='hs-keyglyph'>[</span><span class='hs-conid'>Tree</span> <span class='hs-varid'>a</span><span class='hs-keyglyph'>]</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-varid'>ts2</span><span class='hs-conop'>:</span><span class='hs-keyglyph'>[</span><span class='hs-conid'>Tree</span> <span class='hs-varid'>a</span><span class='hs-keyglyph'>]</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-keyword'>{v:</span><span class='hs-keyglyph'>[</span><span class='hs-conid'>Tree</span> <span class='hs-varid'>a</span><span class='hs-keyglyph'>]</span> <span class='hs-keyword'>| treeListElts v = Bag.union (treeListElts ts1) (treeListElts ts2)
+             &amp;&amp; treeListSize v = treeListSize ts1 + treeListSize ts2}</span> <span class='hs-keyword'>@-}</span>
+<span class=hs-linenum>224: </span><span class='hs-definition'>merge'</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Ord</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>=&gt;</span> <span class='hs-keyglyph'>[</span><span class='hs-conid'>Tree</span> <span class='hs-varid'>a</span><span class='hs-keyglyph'>]</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-keyglyph'>[</span><span class='hs-conid'>Tree</span> <span class='hs-varid'>a</span><span class='hs-keyglyph'>]</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-keyglyph'>[</span><span class='hs-conid'>Tree</span> <span class='hs-varid'>a</span><span class='hs-keyglyph'>]</span>
+<span class=hs-linenum>225: </span><a class=annot href="#"><span class=annottext>forall a .
+(GHC.Classes.Ord&lt;[]&gt; a) =&gt;
+x2:[(Binomial.Tree a)] -&gt; x3:[(Binomial.Tree a)] -&gt; {v : [(Binomial.Tree a)] | treeListElts v == Map_union (treeListElts x2) (treeListElts x3)
+                                                                               &amp;&amp; treeListSize v == treeListSize x2 + treeListSize x3}</span><span class='hs-definition'>merge'</span></a> <a class=annot href="#"><span class=annottext>[(Binomial.Tree a)]</span><span class='hs-varid'>ts1</span></a> <span class='hs-conid'>[]</span> <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>{v : [(Binomial.Tree a)] | (treeListSize v == 0 &lt;=&gt; len v == 0)
+                           &amp;&amp; v == ts1
+                           &amp;&amp; len v &gt;= 0
+                           &amp;&amp; treeListSize v &gt;= 0
+                           &amp;&amp; len v &lt;= treeListSize v}</span><span class='hs-varid'>ts1</span></a>
+<span class=hs-linenum>226: </span><span class='hs-definition'>merge'</span> <span class='hs-conid'>[]</span> <span class='hs-varid'>ts2</span> <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>{v : [(Binomial.Tree a)] | (treeListSize v == 0 &lt;=&gt; len v == 0)
+                           &amp;&amp; len v &gt;= 0
+                           &amp;&amp; treeListSize v &gt;= 0
+                           &amp;&amp; len v &lt;= treeListSize v}</span><span class='hs-varid'>ts2</span></a>
+<span class=hs-linenum>227: </span><span class='hs-definition'>merge'</span> <span class='hs-varid'>ts1</span><span class='hs-keyglyph'>@</span><span class='hs-layout'>(</span><span class='hs-varid'>t1</span><span class='hs-conop'>:</span><span class='hs-varid'>ts1'</span><span class='hs-layout'>)</span> <span class='hs-varid'>ts2</span><span class='hs-keyglyph'>@</span><span class='hs-layout'>(</span><span class='hs-varid'>t2</span><span class='hs-conop'>:</span><span class='hs-varid'>ts2'</span><span class='hs-layout'>)</span>
+<span class=hs-linenum>228: </span>  <span class='hs-keyglyph'>|</span> <a class=annot href="#"><span class=annottext>{v : GHC.Types.Int | v == rank t1
+                     &amp;&amp; v &gt;= 0}</span><span class='hs-varid'>rank</span></a> <a class=annot href="#"><span class=annottext>{v : (Binomial.Tree a) | v == t1
+                         &amp;&amp; treeElts v == Map_store (treeListElts (subtrees v)) (root v) (1 + Map_select (treeListElts (subtrees v)) (root v))
+                         &amp;&amp; treeRank v == rank v
+                         &amp;&amp; treeRank v &gt;= 0}</span><span class='hs-varid'>t1</span></a> <span class='hs-varop'>&lt;</span> <a class=annot href="#"><span class=annottext>{v : GHC.Types.Int | v == rank t2
+                     &amp;&amp; v &gt;= 0}</span><span class='hs-varid'>rank</span></a> <a class=annot href="#"><span class=annottext>{v : (Binomial.Tree a) | v == t2
+                         &amp;&amp; treeElts v == Map_store (treeListElts (subtrees v)) (root v) (1 + Map_select (treeListElts (subtrees v)) (root v))
+                         &amp;&amp; treeRank v == rank v
+                         &amp;&amp; treeRank v &gt;= 0}</span><span class='hs-varid'>t2</span></a> <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>{v : (Binomial.Tree a) | v == t1
+                         &amp;&amp; treeElts v == Map_store (treeListElts (subtrees v)) (root v) (1 + Map_select (treeListElts (subtrees v)) (root v))
+                         &amp;&amp; treeRank v == rank v
+                         &amp;&amp; treeRank v &gt;= 0}</span><span class='hs-varid'>t1</span></a> <span class='hs-conop'>:</span> <a class=annot href="#"><span class=annottext>[(Binomial.Tree a)]</span><span class='hs-varid'>merge'</span></a> <a class=annot href="#"><span class=annottext>{v : [(Binomial.Tree a)] | (treeListSize v == 0 &lt;=&gt; len v == 0)
+                           &amp;&amp; v == ts1'
+                           &amp;&amp; len v &gt;= 0
+                           &amp;&amp; treeListSize v &gt;= 0
+                           &amp;&amp; len v &lt;= treeListSize v}</span><span class='hs-varid'>ts1'</span></a> <a class=annot href="#"><span class=annottext>{v : [(Binomial.Tree a)] | (treeListSize v == 0 &lt;=&gt; len v == 0)
+                           &amp;&amp; len v &gt;= 0
+                           &amp;&amp; treeListSize v &gt;= 0
+                           &amp;&amp; len v &lt;= treeListSize v}</span><span class='hs-varid'>ts2</span></a>
+<span class=hs-linenum>229: </span>  <span class='hs-keyglyph'>|</span> <a class=annot href="#"><span class=annottext>{v : GHC.Types.Int | v == rank t2
+                     &amp;&amp; v &gt;= 0}</span><span class='hs-varid'>rank</span></a> <a class=annot href="#"><span class=annottext>{v : (Binomial.Tree a) | v == t2
+                         &amp;&amp; treeElts v == Map_store (treeListElts (subtrees v)) (root v) (1 + Map_select (treeListElts (subtrees v)) (root v))
+                         &amp;&amp; treeRank v == rank v
+                         &amp;&amp; treeRank v &gt;= 0}</span><span class='hs-varid'>t2</span></a> <span class='hs-varop'>&lt;</span> <a class=annot href="#"><span class=annottext>{v : GHC.Types.Int | v == rank t1
+                     &amp;&amp; v &gt;= 0}</span><span class='hs-varid'>rank</span></a> <a class=annot href="#"><span class=annottext>{v : (Binomial.Tree a) | v == t1
+                         &amp;&amp; treeElts v == Map_store (treeListElts (subtrees v)) (root v) (1 + Map_select (treeListElts (subtrees v)) (root v))
+                         &amp;&amp; treeRank v == rank v
+                         &amp;&amp; treeRank v &gt;= 0}</span><span class='hs-varid'>t1</span></a> <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>{v : (Binomial.Tree a) | v == t2
+                         &amp;&amp; treeElts v == Map_store (treeListElts (subtrees v)) (root v) (1 + Map_select (treeListElts (subtrees v)) (root v))
+                         &amp;&amp; treeRank v == rank v
+                         &amp;&amp; treeRank v &gt;= 0}</span><span class='hs-varid'>t2</span></a> <span class='hs-conop'>:</span> <a class=annot href="#"><span class=annottext>{v : [(Binomial.Tree a)] | treeListElts v == Map_union (treeListElts ts1) (treeListElts ts2')
+                           &amp;&amp; treeListSize v == treeListSize ts1 + treeListSize ts2'}</span><span class='hs-varid'>merge'</span></a> <a class=annot href="#"><span class=annottext>{v : [(Binomial.Tree a)] | (treeListSize v == 0 &lt;=&gt; len v == 0)
+                           &amp;&amp; v == ts1
+                           &amp;&amp; len v &gt;= 0
+                           &amp;&amp; treeListSize v &gt;= 0
+                           &amp;&amp; len v &lt;= treeListSize v}</span><span class='hs-varid'>ts1</span></a> <a class=annot href="#"><span class=annottext>{v : [(Binomial.Tree a)] | (treeListSize v == 0 &lt;=&gt; len v == 0)
+                           &amp;&amp; v == ts2'
+                           &amp;&amp; len v &gt;= 0
+                           &amp;&amp; treeListSize v &gt;= 0
+                           &amp;&amp; len v &lt;= treeListSize v}</span><span class='hs-varid'>ts2'</span></a>
+<span class=hs-linenum>230: </span>  <span class='hs-keyglyph'>|</span> <span class='hs-varid'>otherwise</span>         <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>forall a .
+(GHC.Classes.Ord&lt;[]&gt; a) =&gt;
+x2:(Binomial.Tree a) -&gt; x3:[(Binomial.Tree a)] -&gt; {v : [(Binomial.Tree a)] | treeListElts v == Map_union (treeElts x2) (treeListElts x3)
+                                                                             &amp;&amp; treeListSize v == treeSize x2 + treeListSize x3}</span><span class='hs-varid'>insert'</span></a> <a class=annot href="#"><span class=annottext>{v : (Binomial.Tree a) | rank v == rank t1 + 1
+                         &amp;&amp; treeElts v == Map_union (treeElts t1) (treeElts t2)
+                         &amp;&amp; treeSize v == treeSize t1 + treeSize t2}</span><span class='hs-layout'>(</span></a><span class='hs-varid'>link</span> <a class=annot href="#"><span class=annottext>{v : (Binomial.Tree a) | v == t1
+                         &amp;&amp; treeElts v == Map_store (treeListElts (subtrees v)) (root v) (1 + Map_select (treeListElts (subtrees v)) (root v))
+                         &amp;&amp; treeRank v == rank v
+                         &amp;&amp; treeRank v &gt;= 0}</span><span class='hs-varid'>t1</span></a> <a class=annot href="#"><span class=annottext>{v : (Binomial.Tree a) | v == t2
+                         &amp;&amp; treeElts v == Map_store (treeListElts (subtrees v)) (root v) (1 + Map_select (treeListElts (subtrees v)) (root v))
+                         &amp;&amp; treeRank v == rank v
+                         &amp;&amp; treeRank v &gt;= 0}</span><span class='hs-varid'>t2</span></a><span class='hs-layout'>)</span> <a class=annot href="#"><span class=annottext>{v : [(Binomial.Tree a)] | treeListElts v == Map_union (treeListElts ts1') (treeListElts ts2')
+                           &amp;&amp; treeListSize v == treeListSize ts1' + treeListSize ts2'}</span><span class='hs-layout'>(</span></a><span class='hs-varid'>merge'</span> <a class=annot href="#"><span class=annottext>{v : [(Binomial.Tree a)] | (treeListSize v == 0 &lt;=&gt; len v == 0)
+                           &amp;&amp; v == ts1'
+                           &amp;&amp; len v &gt;= 0
+                           &amp;&amp; treeListSize v &gt;= 0
+                           &amp;&amp; len v &lt;= treeListSize v}</span><span class='hs-varid'>ts1'</span></a> <a class=annot href="#"><span class=annottext>{v : [(Binomial.Tree a)] | (treeListSize v == 0 &lt;=&gt; len v == 0)
+                           &amp;&amp; v == ts2'
+                           &amp;&amp; len v &gt;= 0
+                           &amp;&amp; treeListSize v &gt;= 0
+                           &amp;&amp; len v &lt;= treeListSize v}</span><span class='hs-varid'>ts2'</span></a><span class='hs-layout'>)</span>
+<span class=hs-linenum>231: </span>
+<span class=hs-linenum>232: </span><span class='hs-comment'>----------------------------------------------------------------</span>
+<span class=hs-linenum>233: </span>
+<span class=hs-linenum>234: </span><span class='hs-comment'>-- Todo toSortedList</span>
+<span class=hs-linenum>235: </span><span class='hs-comment'>{-
+{-@ toSortedList :: h:Heap a -&gt; {v:IncrList a | LEltsSize v (elts h) (size h)} / [size h] @-}
+toSortedList :: Ord a =&gt; Heap a -&gt; [a]
+toSortedList (Heap []) = []
+toSortedList h@(Heap (_:_)) =
+  let (minElt, h') = deleteMin h in
+  minElt : toSortedList h'
+-}</span>
+</pre>
+</body>
+</html>

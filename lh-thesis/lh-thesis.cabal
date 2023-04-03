@@ -16,6 +16,8 @@ build-type:     Simple
 library
   exposed-modules:
       PopPush
+      Binomial
+      FibHeap
   hs-source-dirs:
       src
   ghc-options: -fplugin=LiquidHaskell
