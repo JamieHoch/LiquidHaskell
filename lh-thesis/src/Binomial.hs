@@ -4,7 +4,19 @@
 -- Disable ADTs (only used with exactDC)
 {-@ LIQUID "--no-adt" @-}
 
-module Binomial where
+module Binomial 
+    ( size
+  , elts
+  , empty
+  , singleton
+  , insert
+  , merge
+  , deleteMin
+  , fromList
+  , toSortedList
+  , heapSort
+  )
+where
 
 import qualified Language.Haskell.Liquid.Bag as Bag
 import Language.Haskell.Liquid.Bag (Bag)
@@ -19,7 +31,7 @@ assert _ a = a
 {-@ type AtLeastTree a X = Tree (AtLeast a X) @-}
 {-@ type NEList a = {xs:[a] | 0 < len xs} @-}
 {-@ type NEHeap a = {h:Heap a | 0 < len (unheap h)} @-}
-{-@ type IncrList a = [a]<{\xi xj -> xi <= xj}> @-}
+{-@ type IncrList a = [a]<\h -> {v: a | (v >= h)}> @-}
 
 {-@ measure treeRank @-}
 {-@ treeRank :: t:(Tree a) -> {n:Nat | n = rank t} @-}
@@ -27,7 +39,7 @@ treeRank (Node _ r _ _) = r
 
 {-@ measure treeListSize @-}
 {-@ treeListSize :: xs:[Tree a] -> {v:Nat | (len xs <= v) && (v = 0 <=> len xs = 0)} @-}
-treeListSize :: [Tree a] -> Int
+treeListSize :: Ord a => [Tree a] -> Int
 treeListSize [] = 0
 treeListSize (x:xs) = treeSize x + treeListSize xs
 
@@ -47,6 +59,24 @@ data Tree a =
         , subtrees :: [Tree a]
         , treeSize :: Int
         }
+
+{-
+{-@ reflect pow2 @-}
+{-@ pow2 :: Nat -> Pos @-}
+pow2 :: Int -> Int
+pow2 0 = 1
+pow2 n = let acc = pow2 (n - 1) in acc + acc
+
+{-@ pow2Lemma :: t:Tree a -> {v:Tree a | treeSize v = pow2 (rank v) && rank v = rank t && treeElts v = treeElts t} @-}
+pow2Lemma :: Ord a => Tree a -> Tree a
+pow2Lemma t@(Node _ _ [] _) = assert (pow2 0 == 1) $ t
+pow2Lemma (Node x r tts@(_:ts) sz) =
+  let t = rankOfFirstTree tts in
+  let residual = Node x (r - 1) ts (sz - (treeSize t)) in
+  assert (treeRank t == r - 1) $
+  assert (pow2 r == pow2 (r - 1) + pow2 (r - 1)) $
+  link (pow2Lemma t) (pow2Lemma residual)
+-}
 
 {-@ measure treeElts @-}
 {-@ treeElts :: t:Tree a -> {v:Bag a | v = Bag.put (root t) (treeListElts (subtrees t))} @-}
@@ -71,7 +101,6 @@ treeListElts (t:ts) = Bag.union (treeElts t) (treeListElts ts)
 --{-@ tail :: {xs:[a] | len xs > 0} -> [a] @-}
 --tail (_:xs) = xs
 
--- Jamie: for that we need the pragmas
 {-@ reflect rankOfTailDecreases @-}
 {-@ rankOfTailDecreases :: {ts:[{t:Tree a | len ts > treeRank t}]<{\ti tj -> treeRank ti > treeRank tj}> | len ts > 0} -> {v:[{t:Tree a | len ts - 1 > treeRank t}]<{\ti tj -> treeRank ti > treeRank tj}> | v = tail ts} @-}
 rankOfTailDecreases :: [Tree a] -> [Tree a]
@@ -110,8 +139,6 @@ listElts (x : xs) = Bag.union (Bag.put x Bag.empty) (listElts xs)
 treeAtLeastRoot :: Tree a -> Tree a
 treeAtLeastRoot (Node x r ts sz) = Node x r ts sz
 
--- TODO link
-
 {-@ link :: t1:Tree a -> {t2:Tree a | rank t2 = rank t1} -> {v:Tree a | TEltsSize v (Bag.union (treeElts t1) (treeElts t2)) (treeSize t1 + treeSize t2) && rank v = rank t1 + 1}
 @-}
 link :: Ord a => Tree a -> Tree a -> Tree a
@@ -125,12 +152,11 @@ link t1@(Node x1 r1 ts1 sz1) t2@(Node x2 r2 ts2 sz2)
       assert (treeElts new == Bag.union (treeElts t1) (treeElts t2)) $
       new
 
-
 -- simple functions
 
 {-@ measure size @-}
 {-@ size :: h:Heap a -> {v:Nat | (len (unheap h) <= v) && (v = treeListSize (unheap h))} @-}
-size :: Heap a -> Int
+size :: Ord a => Heap a -> Int
 size (Heap ts) = treeListSize ts
 
 {-@ empty :: {v:Heap a | HEltsSize v Bag.empty 0} @-}
@@ -138,16 +164,13 @@ empty :: Heap a
 empty = Heap []
 
 {-@ null :: h:(Heap a) -> {v:Bool | v <=> size h == 0} @-}
-null :: Heap a -> Bool
+null :: Ord a => Heap a -> Bool
 null h = size h == 0
 
-
 {-| Equality of heaps is determined by their elements -}
--- Todo toSortedList
-{- 
+
 instance Ord a => Eq (Heap a) where
   h1 == h2 = toSortedList h1 == toSortedList h2
--}
 
 {-@ singleton :: x:a -> {v:Heap a | HEltsSize v (Bag.put x Bag.empty) 1} @-}
 singleton :: Ord a => a -> Heap a
@@ -166,8 +189,33 @@ insert' t ts@(t':ts')
 insert :: Ord a => a -> Heap a -> Heap a
 insert x (Heap ts) = Heap (insert' (Node x 0 [] 1) ts)
 
+-- TODO {-@ fromList :: xs:[a] -> {v:Heap a | HEltsSize v (listElts xs) (len xs)} @-}
+--{-@ fromList :: xs:[a] -> Heap a @-}
+{-@ assume fromList :: xs:[a] -> {v:Heap a | HEltsSize v (listElts xs) (len xs)} @-}
+fromList :: Ord a => [a] -> Heap a
+fromList [] = Heap []
+fromList (x:xs) = insert x (fromList xs)
 
-{- toSortedList -> deleteMin -> merge -> merge' -> link -}
+-- TODO {-@ appendPreservingListElts :: xs:[a] -> ys:[a] -> {v:[a] | listElts v = Bag.union (listElts xs) (listElts ys) && len v = len xs + len ys} @-}
+--{-@ appendPreservingListElts :: xs:[a] -> ys:[a] -> [a] @-}
+{-@ assume appendPreservingListElts :: xs:[a] -> ys:[a] -> {v:[a] | listElts v = Bag.union (listElts xs) (listElts ys) && len v = len xs + len ys} @-}
+appendPreservingListElts :: [a] -> [a] -> [a]
+appendPreservingListElts [] ys = ys
+appendPreservingListElts (x:xs) ys = x : appendPreservingListElts xs ys
+
+-- TODO treeToList -> treeListToList
+-- only needed for toList (not necessary)
+
+
+
+
+
+
+
+
+
+
+--deleteMin
 
 {-@ deleteMin' :: xs:(NEList (Tree a)) -> {v:(Tree a, [AtLeastTree a (root (fst v))]) | Bag.union (treeElts (fst v)) (treeListElts (snd v)) = treeListElts xs && treeSize (fst v) + treeListSize (snd v) = treeListSize xs}
 @-}
@@ -232,11 +280,29 @@ merge' ts1@(t1:ts1') ts2@(t2:ts2')
 ----------------------------------------------------------------
 
 -- Todo toSortedList
-{-
-{-@ toSortedList :: h:Heap a -> {v:IncrList a | LEltsSize v (elts h) (size h)} / [size h] @-}
+--{-@ toSortedList :: h:Heap a -> {v:IncrList a | LEltsSize v (elts h) (size h)} / [size h] @-}
+{-@ toSortedList :: Ord a => h:Heap a -> [a] / [size h] @-}
 toSortedList :: Ord a => Heap a -> [a]
 toSortedList (Heap []) = []
 toSortedList h@(Heap (_:_)) =
-  let (minElt, h') = deleteMin h in
-  minElt : toSortedList h'
--}
+    let (minElt, h') = deleteMin h in
+    minElt : toSortedList h'
+
+-- TODO heapSort
+-- {-@ heapSort :: xs:[a] -> {v:IncrList a | LEltsSize v (listElts xs) (len xs)} @-}
+{-@ heapSort :: xs:[a] -> [a] @-}
+heapSort :: Ord a => [a] -> [a]
+heapSort = toSortedList . fromList
+
+{- causes error of treeListSize although not involved wtf? -}
+-- TODO isOrdered -> valid
+
+
+-- TODO replace Int by "a"
+{-@ isOrdered :: IncrList Int -> TT @-}
+isOrdered :: [Int] -> Bool
+isOrdered [] = True
+isOrdered [_] = True
+isOrdered (x:y:xys) = x <= y && isOrdered (y:xys)
+
+{- weird elaborate solver error -}
