@@ -13,8 +13,6 @@ module MyBinomial
     )
 where
 
--- missing functions: delete?
-
 {-@ measure treeListSize @-}
 {-@ treeListSize :: xs:[BiTree a] -> {v:Nat | (len xs <= v) && (v = 0 <=> len xs = 0)} @-}
 treeListSize :: Ord a => [BiTree a] -> Int

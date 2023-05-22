@@ -6,25 +6,18 @@
 module FibHeap
     (
         singleton
-        , merge
+        , makeHeap
         , insert
         , findMin
+        , extractMin
+        , merge
         , deleteMin
     ) where
--- missing functions: decreaseKey, delete
-
-import Language.Haskell.Liquid.ProofCombinators
+-- mergeable heap: makeHeap, insert, findMin, extractMin, union=merge
 
 {-@ type Pos = {v:Int | 0 < v} @-}
 {-@ type NEFibHeap = {v : FibHeap a | notEmptyFibHeap v} @-}
-{-@ type IncrList a = [a]<{\xi xj -> xi <= xj}> @-}
-
-{-@ isMin ::  FibTree a -> [FibTree a] -> Bool @-}
-isMin :: (Ord a) => FibTree a -> [FibTree a] -> Bool
-isMin t [] = True
-isMin t (t':ts) = root t <= root t' && isMin t ts
-
-{-@ predicate SzDiff S T D = (size S) - (size T) == D @-}
+{-@ type EFibHeap = {v : FibHeap a | not (notEmptyFibHeap v)} @-}
 
 {-@
 data FibTree [rank] a =
@@ -49,21 +42,28 @@ data FibHeap a =
             , trees :: [FibTree a]
             }
 @-}
--- Todo Size
 data FibHeap a = E | FH { minTree :: FibTree a
                         , trees :: [FibTree a] --wihout minTree
                      }
-  
+
+{-@ isMin ::  FibTree a -> [FibTree a] -> Bool @-}
+isMin :: (Ord a) => FibTree a -> [FibTree a] -> Bool
+isMin t [] = True
+isMin t (t':ts) = root t <= root t' && isMin t ts
+
 {-@ measure ranksum @-}  
 ranksum :: [FibTree a] -> Int
 ranksum [] = 0
 ranksum (t:ts) = rank t + ranksum ts
 
-
 {-@ measure notEmptyFibHeap @-}
 notEmptyFibHeap :: FibHeap a -> Bool
 notEmptyFibHeap E = False
 notEmptyFibHeap _ = True
+
+{-@ makeHeap :: EFibHeap @-}
+makeHeap :: FibHeap a
+makeHeap = E
 
 {-@ singleton :: a -> {v: NEFibHeap | trees v = [] && subtrees (minTree v) = [] && rank (minTree v) = 1}@-}
 singleton :: a -> FibHeap a
@@ -74,16 +74,6 @@ link :: (Ord a) => FibTree a -> FibTree a -> FibTree a
 link t1@(Node x r c1 _) t2@(Node y _ c2 _)
     | x < y = Node x (r+1) (t2:c1) False
     | otherwise = Node y (r+1) (t1:c2) False
-
-{-@ ranksumP :: t1:[FibTree a] -> t2:[FibTree a] -> {ranksum t1 + ranksum t2 == ranksum t2 + ranksum t1 } @-}
-ranksumP :: [FibTree a] -> [FibTree a] -> Proof
-ranksumP t1 t2
- = ranksum t1 + ranksum t2
- === ranksum t2 + ranksum t1
- *** QED
-
- -- Proof ranksum m:ts1++ts2 = rank m + ranksum ts1 + ranksum ts2
--- ranksum t1 + ranksum t2 == ranksum t1++t2
 
 -- constant time
 {-@ merge :: FibHeap a -> NEFibHeap -> NEFibHeap @-}
@@ -162,18 +152,13 @@ pow2 n = 2 * pow2 (n-1)
 size :: FibTree a -> Int
 size (Node _ r _ _) = pow2 r
 
-{- termination error [fibsize (deleteMin h) < fibsize h]
-hsort E = []
-hsort h = (findMin h):(hsort (deleteMin h))
+{-
+ decreaseKey and delete does not make sense to implement
+ in Haskell since there is no reference to an object. Hence
+ we cannot delete it in constant time which is the purpose of 
+ Fibonacci Heaps
 
-heapSort :: (Ord a) => [a] -> [a]
-heapSort = hsort . fromList where
-    hsort E = []
-    hsort h = (findMin h):(hsort $ deleteMin h)
+ left out following functionalities:
+    decreaseKey
+    delete
 -}
-
--- TODO decreaseKey
--- TODO delete
-
--- node with old value x; new value k; where x < k
-decreaseKey h x k = k

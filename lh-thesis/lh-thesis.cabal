@@ -19,6 +19,8 @@ library
       Binomial
       FibHeap
       MyBinomial
+      PotentialAnalysis_FibHeap
+      PotentialAnalysis_Binomial
   hs-source-dirs:
       src
   ghc-options: -fplugin=LiquidHaskell
