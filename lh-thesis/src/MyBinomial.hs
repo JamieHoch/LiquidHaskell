@@ -60,7 +60,12 @@ insTree t ts@(t':ts')
     | rank t > rank t' = t' : insTree t ts' -- needed
     | otherwise = insTree (link t t') ts'
 
-{-@ singleton :: a -> {v: Heap a | len (unheap v) = 1 } @-}
+{-@ measure unlist @-}
+{-@ unlist :: {t:[BiTree a]| len t = 1} -> BiTree a @-}
+unlist :: [BiTree a] -> BiTree a
+unlist [t] = t
+
+{-@ singleton :: x:a -> {v: Heap a | len (unheap v) = 1 && rank (unlist (unheap v)) == 0 && root (unlist (unheap v)) == x && subtrees (unlist (unheap v)) == []} @-}
 singleton :: Ord a => a -> Heap a
 singleton x = Heap [Node 0 x [] 1]
 

@@ -51,26 +51,26 @@ notEmptyFibHeap _ = True
 makeHeap :: Tick (FibHeap a)
 makeHeap = RTick.return E
 
-{-@ singleton :: a -> Tick ({v: NEFibHeap | trees v = [] && subtrees (minTree v) = [] && rank (minTree v) = 1}) @-}
+{-@ singleton :: a -> {t:Tick {v: NEFibHeap | trees v = [] && subtrees (minTree v) = [] && rank (minTree v) = 1} | tcost t = 1} @-}
 singleton :: a -> Tick (FibHeap a)
 singleton x = RTick.step 1 (RTick.pure (FH (Node x 1 [] False) []))
 
-{-@ link :: t1:FibTree a -> {t2:FibTree a | rank t1 == rank t2} -> Tick ({v:FibTree a | rank v == 1 + (rank t1)}) @-}
+{-@ link :: t1:FibTree a -> {t2:FibTree a | rank t1 == rank t2} -> {t:Tick ({v:FibTree a | rank v == 1 + (rank t1)}) | tcost t == 0} @-}
 link :: (Ord a) => FibTree a -> FibTree a -> Tick (FibTree a)
 link t1@(Node x r c1 _) t2@(Node y _ c2 _)
     | x < y = RTick.return (Node x (r+1) (t2:c1) False)
     | otherwise = RTick.return (Node y (r+1) (t1:c2) False)
 
 -- constant time
-{-@ merge :: FibHeap a -> NEFibHeap -> Tick NEFibHeap @-}
-merge:: (Ord a) => FibHeap a -> FibHeap a -> Tick (FibHeap a)
+{-@ merge :: FibHeap a -> NEFibHeap -> {t:Tick NEFibHeap | tcost t == 0}@-}
+merge:: (Ord a) => FibHeap a -> FibHeap a -> Tick (FibHeap a) 
 merge E h = RTick.return h
 merge h1@(FH minTr1 ts1) h2@(FH minTr2 ts2)
     | root minTr1 < root minTr2 = RTick.return (FH minTr1 (minTr2:ts2++ts1))
     | otherwise = RTick.return (FH minTr2 (minTr1:ts1++ts2))
 
 -- constant time
-{-@ insert :: FibHeap a -> a -> Tick NEFibHeap @-}
+{-@ insert :: FibHeap a -> a -> {t:Tick NEFibHeap | tcost t == 0} @-}
 insert :: (Ord a) => FibHeap a -> a -> Tick (FibHeap a)
 insert h x = merge h (tval (singleton x))
 
@@ -94,7 +94,13 @@ meld' (t':ts') (t:ts) = if rank t' == rank t
 consolidate :: (Ord a) => [FibTree a] -> Tick [FibTree a]
 consolidate (t:ts) = meld' [t] ts
 
-{-@ extractMin :: {t:[FibTree a] | len t > 0} -> Tick (FibTree a, [FibTree a]) @-}
+{-@ measure pot @-}
+{-@ pot :: xs:[a] ->  {v: Int | v = (len xs)} @-}
+pot :: [a] -> Int
+pot []     = 0
+pot (x:xs) = 1 + (pot xs)
+
+{-@ extractMin :: {ts:[FibTree a] | len ts > 0} -> {t:Tick (FibTree a, [FibTree a]) | (pot ts) >= (tcost t)} @-}
 extractMin :: (Ord a) => [FibTree a] -> Tick (FibTree a, [FibTree a])
 extractMin [t] = RTick.return (t, [])
 extractMin (t:ts) = 
