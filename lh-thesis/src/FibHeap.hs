@@ -1,12 +1,7 @@
 -- Automatically generate singleton types for data constructors
 {-@ LIQUID "--exactdc" @-}
--- Disable ADTs (only used with exactDC)
-{-@ LIQUID "--no-adt" @-}
 
-module FibHeap
-    (
-        
-    ) where
+module FibHeap where
 -- mergeable heap: makeHeap, insert, findMin, extractMin, union=merge
 import Prelude
 
@@ -41,17 +36,6 @@ data FibHeap a = E | FH { minTree :: FibTree a
                         , trees :: [FibTree a] --wihout minTree
                      }
 
-
-{-@ isMin ::  FibTree a -> [FibTree a] -> Bool @-}
-isMin :: (Ord a) => FibTree a -> [FibTree a] -> Bool
-isMin t [] = True
-isMin t (t':ts) = root t <= root t' && isMin t ts
-
-{-@ measure ranksum @-}
-ranksum :: [FibTree a] -> Int
-ranksum [] = 0
-ranksum (t:ts) = rank t + ranksum ts
-
 {-@ measure notEmptyFibHeap @-}
 notEmptyFibHeap :: FibHeap a -> Bool
 notEmptyFibHeap E = False
@@ -63,9 +47,12 @@ isEmptyFibHeap :: FibHeap a -> Bool
 isEmptyFibHeap E = True
 isEmptyFibHeap _ = False
 
+
 {-@ makeHeap :: EFibHeap @-}
 makeHeap :: FibHeap a
 makeHeap = E
+
+{-@ predicate Rmin T = root (minTree T) @-}
 
 {-@ singleton :: x:a -> {v: NEFibHeap | Rmin v == x && trees v = [] && subtrees (minTree v) = [] && rank (minTree v) = 1}@-}
 singleton :: a -> FibHeap a
@@ -77,9 +64,9 @@ link t1@(Node x r c1 _) t2@(Node y _ c2 _)
     | x < y = Node x (r+1) (t2:c1) False
     | otherwise = Node y (r+1) (t1:c2) False
 
-{-@ predicate Rmin T = root (minTree T) @-}
+
 -- constant time
-{-@ merge :: t:(FibHeap a) -> t':NEFibHeap -> {v:NEFibHeap | Rmin v == Rmin t && Rmin t < Rmin t' || Rmin v == Rmin t' && (Rmin t' <= Rmin t || isEmptyFibHeap t)} @-}
+{-@ merge :: h1:(FibHeap a) -> h2:NEFibHeap -> {v:NEFibHeap | Rmin v == Rmin h1 && Rmin h1 < Rmin h2 || Rmin v == Rmin h2 && (Rmin h2 <= Rmin h1 || isEmptyFibHeap h1)} @-}
 merge:: (Ord a) => FibHeap a -> FibHeap a -> FibHeap a
 merge E h = h
 merge h1@(FH minTr1 ts1) h2@(FH minTr2 ts2)
@@ -94,23 +81,16 @@ insert h x = merge h (singleton x)
 findMin :: (Ord a) => FibHeap a -> a
 findMin = root . minTree
 
-{-@ meld :: t:[FibTree a] -> FibTree a -> {v:[FibTree a] | len v > 0 && len v <= len t +1}@-}
-meld :: Ord a => [FibTree a] -> FibTree a -> [FibTree a]
-meld [] t = [t]
-meld (t':ts) t = if rank t' == rank t then meld ts (link t t')
-                     else t:t':ts
-
-{-@ meld' :: {t:[FibTree a] | len t > 0} -> t':[FibTree a] -> {v:[FibTree a] | len v > 0 && len v <= len t + len t'} @-}
-meld' :: Ord a => [FibTree a] -> [FibTree a] -> [FibTree a]
-meld' (t:ts) [] = (t:ts)
-meld' (t':ts') (t:ts) = if rank t' == rank t 
-    then meld' (meld ts' (link t t')) ts 
-    else meld' (t:t':ts') ts
-
-{-@ consolidate :: {t:[FibTree a] | len t > 0} -> {t:[FibTree a] | len t > 0} @-}
+{-@ consolidate :: {t:[FibTree a] | len t > 0} -> {v:[FibTree a] | len v > 0} @-}
 consolidate :: (Ord a) => [FibTree a] -> [FibTree a]
-consolidate (t:ts) = meld' [t] ts
-   
+consolidate [x] = [x]
+consolidate (x:xs) = foldl meld [x] xs where
+    {-@ meld :: t:[FibTree a] -> FibTree a -> {v:[FibTree a] | len v > 0 && len v <= len t + 1}@-}
+    meld :: Ord a => [FibTree a] -> FibTree a -> [FibTree a]
+    meld [] x = [x]
+    meld (x':xs) x = if rank x == rank x' then meld xs (link x x')
+                     else x:x':xs
+
 {-@ extractMin :: {t:[FibTree a] | len t > 0} -> (FibTree a, [FibTree a]) @-}
 extractMin :: (Ord a) => [FibTree a] -> (FibTree a, [FibTree a])
 extractMin [t] = (t, [])
@@ -119,7 +99,6 @@ extractMin (t:ts) =
         if root t < root t' then (t, ts) else (t', t:ts')
 
 -- Problem with (sz-1) -> need sz = rank minTr + ranksum trees -> Problem with merge
-
 {-@ deleteMin :: h:NEFibHeap -> v: FibHeap a @-}
 deleteMin :: (Ord a) => FibHeap a -> FibHeap a
 deleteMin (FH (Node x _ [] _) [] ) = E
