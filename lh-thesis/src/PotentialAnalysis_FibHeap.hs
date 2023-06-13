@@ -32,10 +32,12 @@ data FibTree a =
 data FibHeap a =
     E | FH {  minTree :: FibTree a
             , trees :: [FibTree a]
+            , numNodes :: Pos
             }
 @-}
 data FibHeap a = E | FH { minTree :: FibTree a
                         , trees :: [FibTree a] --wihout minTree
+                        , numNodes :: Int
                      }
 
 {-@ measure notEmptyFibHeap @-}
@@ -58,7 +60,7 @@ makeHeap = RTick.step 1 (RTick.pure E)
 -- O(1)
 {-@ singleton :: x:a -> {t:Tick {v: NEFibHeap | Rmin v == x && trees v = [] && subtrees (minTree v) = [] && rank (minTree v) = 1} | tcost t == 1} @-}
 singleton :: a -> Tick (FibHeap a)
-singleton x = RTick.step 1 (RTick.pure (FH (Node x 1 [] False) []))
+singleton x = RTick.step 1 (RTick.pure (FH (Node x 1 [] False) [] 1))
 
 -- O(1)
 {-@ link :: t1:FibTree a -> {t2:FibTree a | rank t1 == rank t2} -> {t:Tick ({v:FibTree a | rank v == 1 + (rank t1) && (root v == root t1 && root t1 <= root t2 || root v == root t2 && root t2 <= root t1)}) | tcost t == 1} @-}
@@ -76,9 +78,9 @@ potHeap h = 1
 {-@ merge :: {h1:(FibHeap a) | potHeap h1 == 1} -> {t1:Tick (h2:NEFibHeap) | tcost t1 == 1} -> {t:Tick NEFibHeap | (potHeap h1) + (tcost t1)  >= tcost t} @-}
 merge:: (Ord a) => FibHeap a -> Tick (FibHeap a) -> Tick (FibHeap a)
 merge E h = RTick.step (potHeap E) h
-merge h1@(FH minTr1 ts1) h2@(Tick cost (FH minTr2 ts2))
-    | root minTr1 < root minTr2 = RTick.step (cost + 1) (RTick.pure (FH minTr1 (minTr2:ts2++ts1)))
-    | otherwise = RTick.step (cost + 1) (RTick.pure (FH minTr2 (minTr1:ts1++ts2)))
+merge h1@(FH minTr1 ts1 nodes1) h2@(Tick cost (FH minTr2 ts2 nodes2))
+    | root minTr1 < root minTr2 = RTick.step (cost + 1) (RTick.pure (FH minTr1 (minTr2:ts2++ts1) (nodes1 + nodes2)))
+    | otherwise = RTick.step (cost + 1) (RTick.pure (FH minTr2 (minTr1:ts1++ts2) (nodes1 + nodes2)))
 
 -- O(1)
 -- pot h + 1
@@ -133,19 +135,19 @@ extractMin (t:ts) =
         if root t < root t' then RTick.step 1 (RTick.pure (t, ts))
         else RTick.step 1 (RTick.pure (t', t:ts'))
 
-{-@ myextractmin :: (Ord a) => h: NEFibHeap -> FibHeap a @-}
+{-@ myextractmin :: (Ord a) => {h:NEFibHeap | numNodes h > 1 || (numNodes h == 1 && subtrees (minTree h) == [] && trees h == [])} -> FibHeap a @-}
 myextractmin :: (Ord a) => FibHeap a -> FibHeap a
-myextractmin (FH (Node x _ [] _) []) = E
-myextractmin (FH (Node x _ subtr _) []) = FH (head subtr) subtr
-myextractmin (FH (Node x _ subtr _) ts) = FH (head ts) (ts ++ subtr)
+myextractmin (FH (Node x _ [] _) [] _) = E
+myextractmin (FH (Node x _ subtr _) [] n) = FH (head subtr) subtr (n-1)
+myextractmin (FH (Node x _ subtr _) ts n) = FH (head ts) (ts ++ subtr) (n-1)
 
 
 -- O(log n)
-{-@ deleteMin :: NEFibHeap -> Tick (FibHeap a) @-}
+{-@ deleteMin :: {h:NEFibHeap | numNodes h > 1 || (numNodes h == 1 && subtrees (minTree h) == [] && trees h == [])}  -> Tick (FibHeap a) @-}
 deleteMin :: (Ord a) => FibHeap a -> Tick (FibHeap a)
-deleteMin (FH (Node x _ [] _) []) = RTick.return E
-deleteMin h@(FH minTr ts@(x:xs)) = RTick.return (FH minTr' ts') where
+deleteMin (FH (Node x _ [] _) [] _) = RTick.return E
+deleteMin h@(FH minTr ts@(x:xs) n) = RTick.return (FH minTr' ts' (n-1)) where
     (minTr', ts') = tval (extractMin $ tval (consolidate (subtrees minTr ++ ts)))
-deleteMin h@(FH minTr@(Node _ _ subtr@(x:xs) _) ts) = RTick.return (FH minTr' ts') where
+deleteMin h@(FH minTr@(Node _ _ subtr@(x:xs) _) ts n) = RTick.return (FH minTr' ts' (n-1)) where
     (minTr', ts') = tval (extractMin $ tval (consolidate (subtr ++ ts)))
 
