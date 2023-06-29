@@ -7,7 +7,8 @@ module PotentialAnalysis_Binomial where
 import Language.Haskell.Liquid.RTick as RTick
 
 {-@ measure treeListSize @-}
-{-@ treeListSize :: xs:[BiTree a] -> {v:Nat | (len xs <= v) && (v = 0 <=> len xs = 0)} @-}
+--{-@ treeListSize :: xs:[BiTree a] -> {v:Nat | (len xs <= v) && (v = 0 <=> len xs = 0)} @-}
+{-@ treeListSize :: xs:[BiTree a] -> Int @-} -- TODO why is Nat not possible?
 treeListSize :: Ord a => [BiTree a] -> Int
 treeListSize [] = 0
 treeListSize (x:xs) = treeSize x + treeListSize xs
@@ -45,22 +46,39 @@ link t1@(Node r1 x1 ts1 sz1) t2@(Node r2 x2 ts2 sz2)
 data Heap a = 
     Heap { unheap :: [BiTree a] }
 
-{-@ insTree :: [BiTree a] -> BiTree a -> [BiTree a] -> Tick [BiTree a] @-}
-insTree :: Ord a => [BiTree a] -> BiTree a -> [BiTree a] -> Tick [BiTree a]
-insTree s t [] = RTick.return (s++[t])
-insTree s t ts@(t':ts') 
-    | rank t < rank t' = RTick.return (s++(t : ts))
-    | rank t > rank t' = RTick.step 1 (insTree (s++[t']) t ts') -- needed
-    | otherwise = RTick.step 1 (insTree s (link t t') ts')
+{-@ measure pot @-}
+{-@ pot :: xs:[a] -> {v: Nat | v = (len xs)} @-}
+pot :: [a] -> Int
+pot []     = 0
+pot (x:xs) = 1 + (pot xs)
+{-
+ insTree links trees with same rank
+ s... already checked list;
+ t... new inserted tree;
+ ts...rest of list
+ We assume that the list is ordered by rank
+ O(1)
+ -}
+-- tcost ti = k+1; before t; after t-k+1
+-- pot t - pot ts = change in potential = 1-k
+-- tcost ti + pot t - pot ts = 2
+{-@ insTree :: t:BiTree a -> [BiTree a] -> {ti:(Tick [BiTree a]) | tcost ti > 0 } @-}
+insTree :: Ord a => BiTree a -> [BiTree a] -> Tick [BiTree a]
+insTree t [] = RTick.step 1 (RTick.pure [t])
+insTree t ts@(t':ts') 
+    | rank t < rank t' = RTick.step 1 (RTick.pure (t : ts))
+    | rank t > rank t' = RTick.step (tcost (insTree t ts')) (RTick.pure (t' : tval (insTree t ts'))) -- needed but never used if t is singleton
+    | otherwise = RTick.step 1 (insTree (link t t') ts')
 
-{-@ singleton :: a -> Tick ({v: Heap a | len (unheap v) = 1 }) @-}
+{-@ singleton :: a -> Tick (Heap a) @-}
 singleton :: Ord a => a -> Tick (Heap a)
 singleton x = RTick.return (Heap [Node 0 x [] 1])
 
-
+-- O(1)
 {-@ insert :: a -> Heap a -> Tick (Heap a) @-}
 insert :: Ord a => a -> Heap a -> Tick (Heap a)
-insert x (Heap ts) = RTick.step (tcost (insTree [] (Node 0 x [] 1) ts)) (RTick.pure (Heap (tval (insTree [] (Node 0 x [] 1) ts))))
+insert x (Heap ts) = RTick.step (tcost (insTree (Node 0 x [] 1) ts)) (RTick.pure (Heap (tval (insTree
+ (Node 0 x [] 1) ts))))
 
 mergeTree :: Ord a => [BiTree a] -> [BiTree a] -> [BiTree a] -> Tick [BiTree a]
 mergeTree s ts1 [] = RTick.return (s++ts1)
@@ -68,8 +86,9 @@ mergeTree s [] ts2 = RTick.return (s++ts2)
 mergeTree s ts1@(t1:ts1') ts2@(t2:ts2')
     | rank t1 < rank t2 = RTick.step 1 (mergeTree (s++[t1]) ts1' ts2)
     | rank t2 < rank t1 = RTick.step 1 (mergeTree (s++[t2]) ts1 ts2')
-    | otherwise = insTree [] (link t1 t2) (tval (mergeTree s ts1' ts2'))
+    | otherwise = insTree (link t1 t2) (tval (mergeTree s ts1' ts2'))
 
+-- O(log n)
 mergeHeap :: Ord a => Heap a -> Heap a -> Tick (Heap a)
 mergeHeap (Heap ts1) (Heap ts2) = RTick.step (tcost (mergeTree [] ts1 ts2)) (RTick.pure (Heap (tval (mergeTree [] ts1 ts2))))
 
@@ -85,6 +104,7 @@ findMin :: Ord a => Heap a -> Tick a
 findMin (Heap ts) = 
     let (t, ts') = tval (removeMinTree ts) in RTick.return (root t)
 
+-- O(log n)
 {-@ deleteMin :: NEHeap a -> Tick (Heap a) @-}
 deleteMin :: Ord a => Heap a -> Tick (Heap a)
 deleteMin (Heap ts) = let (Node r x ts1 sz1, ts2) = tval (removeMinTree ts) in

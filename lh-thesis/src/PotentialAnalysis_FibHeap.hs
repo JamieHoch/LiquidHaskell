@@ -4,7 +4,7 @@
 {-@ LIQUID "--ple" @-}
 
 module PotentialAnalysis_FibHeap where
-
+import Prelude 
 import Language.Haskell.Liquid.RTick as RTick
 
 {-@ type Pos = {v:Int | 0 < v} @-}
@@ -52,9 +52,25 @@ isEmptyFibHeap E = True
 isEmptyFibHeap _ = False
 
 -- O(1)
-{-@ makeHeap :: {t:Tick EFibHeap | tcost t == 1} @-}
+{-@ makeHeap :: {t:Tick EFibHeap | tcost t == (log10 10)} @-}
 makeHeap :: Tick (FibHeap a)
 makeHeap = RTick.step 1 (RTick.pure E)
+
+{-@ reflect log10 @-}
+{-@ log10 :: n:Nat -> Nat / [n]@-}
+log10 :: Int -> Int
+log10 n
+  | n <= 10   = 1
+  | otherwise = 1 + log10 (div n 10)
+
+{-
+{-@ div10 :: n:Pos -> {m:Nat | m < n} / [n]@-}
+div10 :: Int -> Int
+div10 n 
+  | n < 10    = 0 
+  | n == 10   = 1
+  | otherwise = 1 + div10 (n-10)
+-}
 
 {-@ predicate Rmin T = root (minTree T) @-}
 -- O(1)
@@ -110,7 +126,6 @@ consolidate (t:ts) = meld (tval (consolidate ts)) t
     len v > 0 does not work because of  {-@ LIQUID "--reflection" @-} flag
     we need len v > 0 such that consolidate can be used in deleteMin
 -}
-
 
 {-@ measure pot @-}
 {-@ pot :: xs:[a] ->  {v: Int | v = (len xs)} @-}
