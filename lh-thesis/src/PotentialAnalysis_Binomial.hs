@@ -6,9 +6,9 @@ module PotentialAnalysis_Binomial where
 
 import Language.Haskell.Liquid.RTick as RTick
 
-{-@ measure treeListSize @-}
---{-@ treeListSize :: xs:[BiTree a] -> {v:Nat | (len xs <= v) && (v = 0 <=> len xs = 0)} @-}
-{-@ treeListSize :: xs:[BiTree a] -> Int @-} -- TODO why is Nat not possible?
+{-@ reflect treeListSize @-}
+{-@ treeListSize :: xs:[BiTree a] -> {v:Nat | (len xs <= v) && (v = 0 <=> len xs = 0)} @-}
+--{-@ treeListSize :: xs:[BiTree a] -> Nat @-} -- TODO Nat is not possible with measure
 treeListSize :: Ord a => [BiTree a] -> Int
 treeListSize [] = 0
 treeListSize (x:xs) = treeSize x + treeListSize xs
@@ -51,18 +51,19 @@ data Heap a =
 pot :: [a] -> Int
 pot []     = 0
 pot (x:xs) = 1 + (pot xs)
+
 {-
  insTree links trees with same rank
- s... already checked list;
- t... new inserted tree;
- ts...rest of list
  We assume that the list is ordered by rank
  O(1)
- -}
--- tcost ti = k+1; before t; after t-k+1
--- pot t - pot ts = change in potential = 1-k
--- tcost ti + pot t - pot ts = 2
-{-@ insTree :: t:BiTree a -> [BiTree a] -> {ti:(Tick [BiTree a]) | tcost ti > 0 } @-}
+
+tcost ti = k+1; 
+num trees before:    pot ts = t; 
+num trees after:     pot (tval ti) = t-k+1;
+pot (tval ti) - pot ts = change in potential = 1-k
+tcost ti + pot (tval ti) - pot ts = 2 
+-}
+{-@ insTree :: BiTree a -> ts:[BiTree a] -> {ti:(Tick [BiTree a]) | tcost ti + pot (tval ti) - pot ts = 2 } @-}
 insTree :: Ord a => BiTree a -> [BiTree a] -> Tick [BiTree a]
 insTree t [] = RTick.step 1 (RTick.pure [t])
 insTree t ts@(t':ts') 
