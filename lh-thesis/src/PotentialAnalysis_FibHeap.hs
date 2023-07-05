@@ -104,6 +104,11 @@ pot (x:xs) = 1 + (pot xs)
 pota :: a -> Int
 pota x = 1
 
+{-@ measure pott @-}
+{-@ pott :: (a,[a]) -> Int @-}
+pott :: (a,[a]) -> Int
+pott (x,xs) = pota x + pot xs
+
 -- O(1)
 {-@ merge :: h1:(FibHeap a) -> h2:NEFibHeap-> {ti:Tick NEFibHeap | tcost ti == 1 && tcost ti + poth (tval ti) - (poth h1 + poth h2) == 1} @-}
 merge:: (Ord a) => FibHeap a -> FibHeap a -> Tick (FibHeap a)
@@ -123,17 +128,19 @@ findMin :: (Ord a) => FibHeap a -> Tick a
 findMin h = RTick.step 1 (RTick.pure (root (minTree h)))
 
 -- geht t für ganze liste durch
-{-@ meld :: xs:[FibTree a] -> FibTree a -> {ti:Tick ({t:[FibTree a] | len t > 0})| pot xs >= tcost ti} @-}
+-- O(log n)
+{-@ meld :: xs:[FibTree a] -> FibTree a -> {ti:Tick ({t:[FibTree a] | len t > 0})| tcost ti + pot (tval ti) - (pot xs + 1) <= pot (tval ti)} @-}
 meld :: Ord a => [FibTree a] -> FibTree a -> Tick [FibTree a]
 meld [] t = RTick.return [t]
 meld (x:xs) t = if rank x == rank t then RTick.step 1 (meld xs (tval (link t x)))
-                     else RTick.step 1 (RTick.pure (x: tval (meld xs t)))
+                     else RTick.step (1 + tcost (meld xs t)) (RTick.pure (x: tval (meld xs t)))
 -- O(log n)
 -- ruft meld mit jedem element auf
-{-@ consolidate :: {t:[FibTree a] | len t > 0} -> Tick ({t:[FibTree a] | len t > 0}) @-}
+-- ACHTUNG! cheat weil kein pointer
+{-@ consolidate :: {xs:[FibTree a] | len xs > 0} -> {ti:Tick ({t:[FibTree a] | len t > 0}) | tcost ti + pot (tval ti) - (pot xs + 1) <= pot (tval ti) } @-}
 consolidate :: (Ord a) => [FibTree a] -> Tick [FibTree a]
-consolidate [x] = RTick.return [x]
-consolidate (t:ts) = meld (tval (consolidate ts)) t
+consolidate [x] = RTick.step 1 (RTick.pure [x])
+consolidate (x:xs) = RTick.step (1 + tcost (consolidate xs)) (RTick.pure (tval (meld (tval (consolidate xs)) x)))
 {-
     consolidate mit foldl
     len v > 0 does not work because of  {-@ LIQUID "--reflection" @-} flag
@@ -142,14 +149,13 @@ consolidate (t:ts) = meld (tval (consolidate ts)) t
 
 
 -- O(len list)
--- (pot ts) + acost >= (tcost t) + (pot t)
-{-@ extractMin :: {ts:[FibTree a] | len ts > 0} -> {t:Tick (FibTree a, [FibTree a]) | (pot ts) >= (tcost t)} @-}
+{-@ extractMin :: {ts:[FibTree a] | len ts > 0} -> {ti:Tick (FibTree a, [FibTree a]) | tcost ti + pott (tval ti) - pot ts <= pott (tval ti)} @-}
 extractMin :: (Ord a) => [FibTree a] -> Tick (FibTree a, [FibTree a])
-extractMin [t] = RTick.return (t, [])
+extractMin [t] = RTick.step 1 (RTick.pure (t, []))
 extractMin (t:ts) =
     let (t', ts') = tval (extractMin ts) in
-        if root t < root t' then RTick.step 1 (RTick.pure (t, ts))
-        else RTick.step 1 (RTick.pure (t', t:ts'))
+        if root t < root t' then RTick.step (1+ tcost (extractMin ts)) (RTick.pure (t, ts))
+        else RTick.step (1+ tcost (extractMin ts)) (RTick.pure (t', t:ts'))
 
 -- TODO check marked node m
 {-@ myextractmin :: (Ord a) => {h:NEFibHeap | numNodes h > 1 || (numNodes h == 1 && subtrees (minTree h) == [] && trees h == [])} -> FibHeap a @-}
