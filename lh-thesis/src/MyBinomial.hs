@@ -94,10 +94,10 @@ removeMinTree (t:ts) =
 {-@ findMin :: NEHeap a -> a @-}
 findMin :: Ord a => Heap a -> a
 findMin (Heap ts) = 
-    let (t, ts') = removeMinTree ts in root t
+    let (t, _) = removeMinTree ts in root t
 
 {-@ deleteMin :: NEHeap a -> Heap a @-}
 deleteMin :: Ord a => Heap a -> Heap a
-deleteMin (Heap ts) = let (Node r x ts1 sz1, ts2) = removeMinTree ts in
+deleteMin (Heap ts) = let (Node _ x ts1 _, ts2) = removeMinTree ts in
    Heap (mergeTree (reverse ts1) ts2)
 

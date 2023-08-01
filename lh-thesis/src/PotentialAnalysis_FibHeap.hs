@@ -4,7 +4,7 @@
 {-@ LIQUID "--ple" @-}
 
 module PotentialAnalysis_FibHeap where
-import Prelude 
+import Prelude
 import Language.Haskell.Liquid.RTick as RTick
 
 {-@ type Pos = {v:Int | 0 < v} @-}
@@ -42,6 +42,7 @@ data FibHeap a = E | FH { minTree :: FibTree a
                         , markedNodes :: Int
                      }
 
+
 {-@ measure notEmptyFibHeap @-}
 notEmptyFibHeap :: FibHeap a -> Bool
 notEmptyFibHeap E = False
@@ -49,9 +50,11 @@ notEmptyFibHeap _ = True
 
 {-@ measure isEmptyFibHeap @-}
 {-@ isEmptyFibHeap :: t:(FibHeap a) -> {t':Bool | (not (notEmptyFibHeap t) && t') || (notEmptyFibHeap t && not t')} @-}
-isEmptyFibHeap :: FibHeap a -> Bool 
+isEmptyFibHeap :: FibHeap a -> Bool
 isEmptyFibHeap E = True
 isEmptyFibHeap _ = False
+
+
 
 -- O(1)
 {-@ makeHeap :: {t:Tick EFibHeap | tcost t == 0} @-}
@@ -76,7 +79,7 @@ div10 n
 
 {-@ predicate Rmin T = root (minTree T) @-}
 -- O(1)
-{-@ singleton :: x:a -> {ti:Tick NEFibHeap | tcost ti == 1 && poth (tval ti) == 1} @-}
+{-@ singleton :: x:a -> {ti:Tick NEFibHeap | tcost ti + poth (tval ti) - pota x = 1 && poth (tval ti) = 1} @-}
 singleton :: a -> Tick (FibHeap a)
 singleton x = RTick.step 1 (RTick.pure (FH (Node x 1 [] False) [] 1 0))
 
@@ -108,6 +111,14 @@ pota x = 1
 {-@ pott :: (a,[a]) -> Int @-}
 pott :: (a,[a]) -> Int
 pott (x,xs) = pota x + pot xs
+
+-- potential as nodes
+{-@ reflect potn @-}
+{-@ potn :: h:FibHeap a -> Nat @-}
+potn :: FibHeap a -> Int
+potn E = 0
+potn h = numNodes h
+
 
 -- O(1)
 {-@ merge :: h1:(FibHeap a) -> h2:NEFibHeap-> {ti:Tick NEFibHeap | tcost ti == 1 && tcost ti + poth (tval ti) - (poth h1 + poth h2) == 1} @-}
@@ -157,21 +168,20 @@ extractMin (t:ts) =
         if root t < root t' then RTick.step (1+ tcost (extractMin ts)) (RTick.pure (t, ts))
         else RTick.step (1+ tcost (extractMin ts)) (RTick.pure (t', t:ts'))
 
--- TODO check marked node m
-{-@ myextractmin :: (Ord a) => {h:NEFibHeap | numNodes h > 1 || (numNodes h == 1 && subtrees (minTree h) == [] && trees h == [])} -> FibHeap a @-}
+{-@ myextractmin :: (Ord a) => {h:NEFibHeap | not (marked (minTree h)) &&  numNodes h > 1 || (numNodes h == 1 && subtrees (minTree h) == [] && trees h == [])} -> FibHeap a @-}
 myextractmin :: (Ord a) => FibHeap a -> FibHeap a
 myextractmin (FH (Node x _ [] _) [] _ _) = E
 myextractmin (FH (Node x _ subtr _) [] n m) = FH (head subtr) subtr (n-1) m
 myextractmin (FH (Node x _ subtr _) ts n m) = FH (head ts) (ts ++ subtr) (n-1) m
 
-
+-- TODO pot analysis with num nodes
+-- weil subtr is länger als 1
 -- O(log n)
--- TODO check marked node m
-{-@ deleteMin :: {h:NEFibHeap | numNodes h > 1 || (numNodes h == 1 && subtrees (minTree h) == [] && trees h == [])}  -> Tick (FibHeap a) @-}
+{-@ deleteMin :: {h:NEFibHeap | not (marked (minTree h)) && numNodes h > 1 || (numNodes h == 1 && subtrees (minTree h) == [] && trees h == [])} -> {ti:Tick (FibHeap a) | potn h >= potn (tval ti)} @-}
 deleteMin :: (Ord a) => FibHeap a -> Tick (FibHeap a)
 deleteMin (FH (Node x _ [] _) [] _ _) = RTick.return E
-deleteMin h@(FH minTr ts@(x:xs) n m) = RTick.return (FH minTr' ts' (n-1) m) where
+deleteMin h@(FH minTr ts@(x:xs) n m) = RTick.step (tcost (extractMin $ tval (consolidate (subtrees minTr ++ ts)))) (RTick.pure (FH minTr' ts' (n-1) m)) where
     (minTr', ts') = tval (extractMin $ tval (consolidate (subtrees minTr ++ ts)))
-deleteMin h@(FH minTr@(Node _ _ subtr@(x:xs) _) ts n m) = RTick.return (FH minTr' ts' (n-1) m) where
+deleteMin h@(FH minTr@(Node _ _ subtr@(x:xs) _) ts n m) = RTick.step (tcost (extractMin $ tval (consolidate (subtr ++ ts)))) (RTick.pure (FH minTr' ts' (n-1) m)) where
     (minTr', ts') = tval (extractMin $ tval (consolidate (subtr ++ ts)))
 
