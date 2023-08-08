@@ -53,18 +53,6 @@ pot :: [a] -> Int
 pot []     = 0
 pot (x:xs) = 1 + (pot xs)
 
--- potential as nodes
-{-@ reflect potn @-}
-{-@ potn :: xs:[BiTree a] -> {v: Nat | v = treeListSize xs} @-}
-potn :: [BiTree a] -> Int
-potn [] = 0
-potn (x:xs) = treeSize x + potn xs
-
--- potential of tuple as nodes
-{-@ reflect pottn @-}
-pottn :: (BiTree a, [BiTree a]) -> Int
-pottn (x,xs) = treeSize x + potn xs
-
 -- potential of tuple
 {-@ measure pott @-}
 {-@ pott :: (a,[a]) -> Int @-}
@@ -102,7 +90,6 @@ insert x (Heap ts) = RTick.step (tcost (insTree (Node 0 x [] 1) ts)) (RTick.retu
 
 -- tcost ti + pot (tval ti) - (pot ts1 + pot ts2) <= log n
 -- length of list is log n ==> log n = pot (tval ti)
--- POTN: potn (tval ti) <= potn ts1 + potn ts2
 {-@ mergeTree :: ts1:[BiTree a] -> ts2:[BiTree a] -> {ti:Tick [BiTree a] | tcost ti + pot (tval ti) - (pot ts1 + pot ts2) <= len (tval ti) && pot (tval ti) == len (tval ti) && len (tval ti) <= len ts1 + len ts2} @-}
 mergeTree :: Ord a => [BiTree a] -> [BiTree a] -> Tick [BiTree a]
 mergeTree ts1 [] = RTick.return ts1
@@ -112,15 +99,15 @@ mergeTree ts1@(t1:ts1') ts2@(t2:ts2')
     | rank t2 < rank t1 = RTick.step (1 + tcost (mergeTree ts1 ts2')) (RTick.return (t2 : tval (mergeTree ts1 ts2')))
     | otherwise = RTick.step 2 (RTick.pure (tval (insTree (link t1 t2) (tval (mergeTree ts1' ts2'))))) 
 --  | otherwise = RTick.step (tcost insTree (link t1 t2) (tval (mergeTree ts1' ts2')))) (RTick.pure (tval (insTree (link t1 t2) (tval (mergeTree ts1' ts2'))))) 
-    -- cheat in last step because we know that insTree is constant amortized time (otherwise it counts worst case time)
+-- TODO fix cheat
+-- cheat in last step because we know that insTree is constant amortized time (otherwise it counts worst case time)
 
 -- O(log n)
 {-@ mergeHeap :: h1:Heap a -> h2:Heap a -> {ti:Tick (Heap a) | tcost ti +  pot (unheap (tval ti)) - (pot (unheap h1) + pot (unheap h2)) <= pot (unheap (tval ti))} @-}
 mergeHeap :: Ord a => Heap a -> Heap a -> Tick (Heap a)
 mergeHeap (Heap ts1) (Heap ts2) = RTick.step (tcost (mergeTree ts1 ts2)) (RTick.return (Heap (tval (mergeTree ts1 ts2))))
 
--- strange behaviour: tcost ti <= pot ts aber nicht tcost ti <= potn ts
-{-@ removeMinTree :: ts:NEList (BiTree a) -> {ti:Tick (BiTree a, [BiTree a]) | tcost ti + pott (tval ti) - pot ts <= pot ts && pott (tval ti) == pot ts && tcost ti <= pot ts && pottn (tval ti) == potn ts} @-}
+{-@ removeMinTree :: ts:NEList (BiTree a) -> {ti:Tick (BiTree a, [BiTree a]) | tcost ti + pott (tval ti) - pot ts <= pot ts && pott (tval ti) == pot ts && tcost ti <= pot ts} @-}
 removeMinTree :: Ord a => [BiTree a] -> Tick (BiTree a, [BiTree a])
 removeMinTree [t] = RTick.return (t,[])
 removeMinTree (t:ts) =
@@ -139,6 +126,6 @@ deleteMin :: Ord a => Heap a -> Tick (Heap a)
 deleteMin h@(Heap ts) = let (Node _ x ts1 _, ts2) = tval (removeMinTree ts) in
    deleteMin' ts1 ts2 h
 
-{-@ deleteMin' :: ts1:[BiTree a] -> ts2:[BiTree a] -> {h:NEHeap a | pot (unheap h) == pot ts2 + 1} -> {ti:Tick (Heap a) | tcost ti + pot (unheap (tval ti)) - pot (unheap h) < pot ts1 + pot ts2 + pot (unheap h) + pot ts1 && pot (unheap (tval ti)) <= pot ts1 + pot ts2} @-}
+{-@ deleteMin' :: ts1:[BiTree a] -> ts2:[BiTree a] -> {h:NEHeap a | pot (unheap h) == pot ts2 + 1} -> {ti:Tick (Heap a) | tcost ti + pot (unheap (tval ti)) - pot (unheap h) <= 2* (pot ts1 + pot ts2) && pot (unheap (tval ti)) <= pot ts1 + pot ts2} @-}
 deleteMin' :: Ord a => [BiTree a] -> [BiTree a] -> Heap a -> Tick (Heap a)
 deleteMin' ts1 ts2 h = RTick.step (tcost (mergeTree (reverse ts1) ts2) + tcost (removeMinTree (unheap h))) (RTick.pure (Heap (tval (mergeTree (reverse ts1) ts2))))
