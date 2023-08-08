@@ -119,7 +119,8 @@ mergeTree ts1@(t1:ts1') ts2@(t2:ts2')
 mergeHeap :: Ord a => Heap a -> Heap a -> Tick (Heap a)
 mergeHeap (Heap ts1) (Heap ts2) = RTick.step (tcost (mergeTree ts1 ts2)) (RTick.return (Heap (tval (mergeTree ts1 ts2))))
 
-{-@ removeMinTree :: ts:NEList (BiTree a) -> {ti:Tick (BiTree a, [BiTree a]) | tcost ti + pott (tval ti) - pot ts <= pot ts && pott (tval ti) == pot ts} @-}
+-- strange behaviour: tcost ti <= pot ts aber nicht tcost ti <= potn ts
+{-@ removeMinTree :: ts:NEList (BiTree a) -> {ti:Tick (BiTree a, [BiTree a]) | tcost ti + pott (tval ti) - pot ts <= pot ts && pott (tval ti) == pot ts && tcost ti <= pot ts && pottn (tval ti) == potn ts} @-}
 removeMinTree :: Ord a => [BiTree a] -> Tick (BiTree a, [BiTree a])
 removeMinTree [t] = RTick.return (t,[])
 removeMinTree (t:ts) =
@@ -133,16 +134,11 @@ findMin (Heap ts) =
     let (t, _) = tval (removeMinTree ts) in RTick.step (tcost (removeMinTree ts)) (RTick.pure (root t))
 
 -- O(log n)
--- tcost ti + pot (unheap (tval ti)) - pot (unheap h) <= pot (unheap h) + pot (unheap h)
--- pott (tval (removeMinTree ts)) == pot ts
--- potn (tval (mergeTree (reverse ts1) ts2)) <= potn (unheap h)
--- TODO correct tcost --> find out why potn does not work
---tcost ti <= pot (unheap h) && tcost ti - pot (unheap (tval ti)) - pot (unheap h) <= pot (unheap h) + pot (unheap h)
-{-@ deleteMin :: h:NEHeap a -> {ti:Tick (Heap a) | tcost ti <= pot (unheap h)}@-}
+{-@ deleteMin :: h:NEHeap a -> Tick (Heap a)@-}
 deleteMin :: Ord a => Heap a -> Tick (Heap a)
-deleteMin (Heap ts) = let (Node _ x ts1 _, ts2) = tval (removeMinTree ts) in
-   RTick.step (pott (tval (removeMinTree ts))) (RTick.pure (Heap (tval (mergeTree (reverse ts1) ts2))))
+deleteMin h@(Heap ts) = let (Node _ x ts1 _, ts2) = tval (removeMinTree ts) in
+   deleteMin' ts1 ts2 h
 
-{-
-for deleteMin we must work with potn because ts1 can make our list longer but the number of nodes is the same
--}
+{-@ deleteMin' :: ts1:[BiTree a] -> ts2:[BiTree a] -> {h:NEHeap a | pot (unheap h) == pot ts2 + 1} -> {ti:Tick (Heap a) | tcost ti + pot (unheap (tval ti)) - pot (unheap h) < pot ts1 + pot ts2 + pot (unheap h) + pot ts1 && pot (unheap (tval ti)) <= pot ts1 + pot ts2} @-}
+deleteMin' :: Ord a => [BiTree a] -> [BiTree a] -> Heap a -> Tick (Heap a)
+deleteMin' ts1 ts2 h = RTick.step (tcost (mergeTree (reverse ts1) ts2) + tcost (removeMinTree (unheap h))) (RTick.pure (Heap (tval (mergeTree (reverse ts1) ts2))))
