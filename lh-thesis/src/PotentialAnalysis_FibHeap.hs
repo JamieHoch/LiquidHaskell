@@ -54,8 +54,6 @@ isEmptyFibHeap :: FibHeap a -> Bool
 isEmptyFibHeap E = True
 isEmptyFibHeap _ = False
 
-
-
 -- O(1)
 {-@ makeHeap :: {t:Tick EFibHeap | tcost t == 0} @-}
 makeHeap :: Tick (FibHeap a)
@@ -67,15 +65,6 @@ log2 :: Int -> Int
 log2 n
   | n <= 2   = 1
   | otherwise = 1 + log2 (div n 2)
-
-{-
-{-@ div10 :: n:Pos -> {m:Nat | m < n} / [n]@-}
-div10 :: Int -> Int
-div10 n 
-  | n < 10    = 0 
-  | n == 10   = 1
-  | otherwise = 1 + div10 (n-10)
--}
 
 {-@ predicate Rmin T = root (minTree T) @-}
 -- O(1)
@@ -160,7 +149,7 @@ consolidate (x:xs) = RTick.step (1 + tcost (consolidate xs)) (RTick.pure (tval (
 
 
 -- O(len list)
-{-@ extractMin :: {ts:[FibTree a] | len ts > 0} -> {ti:Tick (FibTree a, [FibTree a]) | tcost ti + pott (tval ti) - pot ts <= pott (tval ti) && pott (tval ti) <= pot ts && tcost ti <= pot ts } @-}
+{-@ extractMin :: {ts:[FibTree a] | len ts > 0} -> {ti:Tick (FibTree a, {ts':[FibTree a] | len ts' <= len ts - 1}) | tcost ti + pott (tval ti) - pot ts <= pott (tval ti) && pott (tval ti) <= pot ts && tcost ti <= pot ts } @-}
 extractMin :: (Ord a) => [FibTree a] -> Tick (FibTree a, [FibTree a])
 extractMin [t] = RTick.step 1 (RTick.pure (t, []))
 extractMin (t:ts) =
@@ -180,20 +169,21 @@ myextractmin (FH (Node x _ subtr _) ts n m) = FH (head ts) (ts ++ subtr) (n-1) m
 {-@ deleteMin :: {h:NEFibHeap | not (marked (minTree h)) && numNodes h > 1 || (numNodes h == 1 && subtrees (minTree h) == [] && trees h == [])} -> ti:Tick (FibHeap a) @-}
 deleteMin :: (Ord a) => FibHeap a -> Tick (FibHeap a)
 deleteMin (FH (Node x _ [] _) [] _ _) = RTick.return E
-deleteMin h@(FH minTr ts n m) = let (minTr', ts') = tval (extractMin $ tval (consolidate (subtrees minTr ++ ts))) in 
-   deleteMin' minTr' h ts'
+deleteMin h@(FH minTr ts n m) = let (minTr', ts') = tval (extractMin $ tval (consolidate (subtrees minTr ++ ts))) in
+   deleteMin' h (minTr', ts')
 
--- tcost ti + pot (tval ti) - poth h <= 2*(pot ts1 + pot ts2) + pot (ts1)
---3*(pot (subtrees (minTree h)) + pot (trees h))
-{-@ deleteMin' :: (Ord a) => FibTree a  -> {h:NEFibHeap | numNodes h > 1 && (len (subtrees (minTree h)) + len (trees h) > 0)} -> ts':[FibTree a] -> {ti:Tick (FibHeap a) | tcost ti <= pot (subtrees (minTree h)) + pot (trees h) && poth h <= pot (trees h) + 1 + 2*markedNodes h && poth (tval ti) <= pot ts' + 1 + 2*markedNodes h} @-}
-deleteMin' :: (Ord a) => FibTree a -> FibHeap a -> [FibTree a] -> Tick (FibHeap a)
-deleteMin' minTr' h@(FH minTr ts n m) ts'= RTick.step (tcost (extractMin $ tval (consolidate (subtrees minTr ++ ts)))) (RTick.pure (FH minTr' ts' (n-1) m))
-
---(tcost (extractMin $ tval (consolidate (subtrees minTr ++ ts))))
+{-
+tcost ti <= pot (subtrees (minTree h)) + pot (trees h) &&
+poth h <= pot (trees h) + 1 + 2*markedNodes h && 
+poth (tval ti) <= pot ts' + 1 + 2*markedNodes h
+-}
+{-@ deleteMin' :: (Ord a) => {h:NEFibHeap | numNodes h > 1 && (len (subtrees (minTree h)) + len (trees h) > 0)} -> {k:(FibTree a,[FibTree a])| pott k <= pot (subtrees (minTree h)) + pot (trees h) }-> {ti:Tick (FibHeap a) | tcost ti + poth (tval ti) - poth h <= 2 * pot (subtrees (minTree h)) + pot (trees h)} @-}
+deleteMin' :: (Ord a) => FibHeap a -> (FibTree a ,[FibTree a]) -> Tick (FibHeap a)
+deleteMin' h@(FH minTr ts n m) (minTr', ts') = RTick.step (tcost (extractMin $ tval (consolidate (subtrees minTr ++ ts)))) (RTick.pure (FH minTr' ts' (n-1) m))
 
 {-@ infix   ++ @-}
 {-@ reflect ++ @-}
-{-@ (++) :: xs:[a] -> ys:[a] -> {os:[a] | len os == len xs + len ys && pot os == pot xs + pot ys} @-}
+{-@ (++) :: xs:[a] -> ys:[a] -> {zs:[a] | len zs == len xs + len ys && pot zs == pot xs + pot ys} @-}
 (++) :: [a] -> [a] -> [a]
 []     ++ ys = ys
 (x:xs) ++ ys = x:(xs ++ ys)
