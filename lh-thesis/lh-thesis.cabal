@@ -21,6 +21,7 @@ library
       MyBinomial
       PotentialAnalysis_FibHeap
       PotentialAnalysis_Binomial
+      PotentialAnalysis_Binomial2
   hs-source-dirs:
       src
   ghc-options: -fplugin=LiquidHaskell
