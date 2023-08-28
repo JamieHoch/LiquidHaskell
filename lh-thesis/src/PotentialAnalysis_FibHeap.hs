@@ -11,6 +11,12 @@ import Language.Haskell.Liquid.RTick as RTick
 {-@ type NEFibHeap = {v : FibHeap a | notEmptyFibHeap v} @-}
 {-@ type EFibHeap = {v : FibHeap a | not (notEmptyFibHeap v)} @-}
 
+{-@ reflect treeListSize @-}
+{-@ treeListSize :: Ord a => xs:[FibTree a] -> {v:Nat | (len  xs <= v) && (v = 0 <=> len xs = 0)} @-}
+treeListSize :: Ord a => [FibTree a] -> Int
+treeListSize [] = 0
+treeListSize (x:xs) = treeSize x + treeListSize xs
+
 {-@
 data FibTree [rank] a =
     Node
@@ -18,6 +24,7 @@ data FibTree [rank] a =
         , rank :: Nat
         , subtrees :: [FibTree a]
         , marked :: Bool
+        , treeSize :: {v:Pos | v = 1 + treeListSize subtrees}
         }
 @-}
 data FibTree a =
@@ -26,6 +33,7 @@ data FibTree a =
         , rank :: Int -- size of the tree
         , subtrees :: [FibTree a]
         , marked :: Bool
+        , treeSize :: Int
     }
 
 {-@
@@ -71,15 +79,15 @@ log2 n
 {-@ reflect singleton @-}
 {-@ singleton :: x:a -> {ti:Tick NEFibHeap | tcost (singleton x) + poth (tval (singleton x)) - pota x = 1 && poth (tval ti) = 1} @-}
 singleton :: a -> Tick (FibHeap a)
-singleton x = wait (FH (Node x 1 [] False) [] 1 0)
+singleton x = wait (FH (Node x 1 [] False 1) [] 1 0)
 
 -- O(1)
 {-@ reflect link @-}
 {-@ link :: t1:FibTree a -> {t2:FibTree a | rank t1 == rank t2} -> {t:Tick ({v:FibTree a | rank v == 1 + (rank t1) && (root v == root t1 && root t1 <= root t2 || root v == root t2 && root t2 <= root t1)}) | tcost t == 1} @-}
 link :: (Ord a) => FibTree a -> FibTree a -> Tick (FibTree a)
-link t1@(Node x r c1 _) t2@(Node y _ c2 _)
-    | x < y = wait (Node x (r+1) (t2:c1) False)
-    | otherwise = wait (Node y (r+1) (t1:c2) False)
+link t1@(Node x r c1 _ sz1) t2@(Node y _ c2 _ sz2)
+    | x < y = wait (Node x (r+1) (t2:c1) False (sz1 + sz2))
+    | otherwise = wait (Node y (r+1) (t1:c2) False (sz1 + sz2))
 
 {-@ measure poth @-}
 {-@ poth :: h:FibHeap a -> {v:Nat | v == 0 && isEmptyFibHeap h || v == len (trees h) + 1 + 2*markedNodes h}@-}
@@ -183,7 +191,7 @@ myextractmin (FH (Node x _ subtr _) ts n m) = FH (head ts) (ts ++ subtr) (n-1) m
 -- O(log n)
 {-@ deleteMin :: {h:NEFibHeap | not (marked (minTree h)) && numNodes h > 1 || (numNodes h == 1 && subtrees (minTree h) == [] && trees h == [])} -> ti:Tick (FibHeap a) @-}
 deleteMin :: (Ord a) => FibHeap a -> Tick (FibHeap a)
-deleteMin (FH (Node x _ [] _) [] _ _) = pure E
+deleteMin (FH (Node x _ [] _ _) [] _ _) = pure E
 deleteMin h@(FH minTr ts n m) = let (minTr', ts') = tval (extractMin $ tval (consolidate (subtrees minTr ++ ts))) in
    deleteMin' h (minTr', ts')
 
@@ -202,4 +210,63 @@ deleteMin' h@(FH minTr ts n m) (minTr', ts') = Tick (tcost (extractMin $ tval (c
 (++) :: [a] -> [a] -> [a]
 []     ++ ys = ys
 (x:xs) ++ ys = x:(xs ++ ys)
+
+-- returns Heap where v is replaced by k
+-- replace :: Ord a => FibHeap a -> a -> a -> FibHeap a
+-- replace h v k = FH (replace'' minTree h) (replace' (trees h) v k) (numNodes h) (markedNodes h)
+
+{-@ replace' :: Ord a => ts:[FibTree a] -> a -> a -> [FibTree a] / [treeListSize ts] @-}
+replace' :: Ord a => [FibTree a] -> a -> a -> [FibTree a]
+replace' [] v k = []
+replace' (t:ts) v k = (replace'' [t] v k) : replace' ts v k
+
+{-@ replace'' :: Ord a => {ts:[FibTree a] | len ts == 1} -> a -> a -> FibTree a / [treeListSize ts]@-}
+replace'' :: Ord a => [FibTree a] -> a -> a -> FibTree a
+replace'' [Node x r ts mark sz] v k = if x == v then Node k r ts mark sz else Node k r ts mark sz --Node x r (replace' ts v k) mark sz
+
+{-@ reflect listRank @-}
+listRank [] = 0
+listRank (t:ts) = rank t + listRank ts
+
+{-
+{-@ numNod :: Ord a => ts:[FibTree a] -> Int / [treeListSize ts] @-}
+numNod :: Ord a => [FibTree a] -> Int
+numNod [] = 0
+numNod (t:ts) = numNod' t + numNod ts
+
+numNod' :: Ord a => FibTree a -> Int
+numNod' t = 1 + numNod (subtrees t)
+-}
+
+-- getParent :: Ord a => FibHeap a -> a -> [FibTree a]
+-- getParent h k = 
+
+-- getTree :: Ord a => FibHeap a -> a -> FibTree a
+-- getTree h k =
+
+-- getTree' [] k = 
+-- getTree' (t:ts) k = 
+
+-- performCuts :: Ord a => FibHeap a -> a -> FibHeap a
+-- performCuts h k = if y != [] && k < key (fst y) then 
+    -- cut x y
+    -- cascading_cut y
+        -- where y = getParent h k
+            --   x = getTree h k
+
+-- updateMin h k = if k < root (minTree h) then FH (getTree h k) (trees (deleteTree (trees h) k) ++ minTree h) (numNodes h) (markedNodes h)
+
+deleteTree :: Ord a => [FibTree a] -> a -> [FibTree a]
+deleteTree [] _ = []
+deleteTree (t:ts) k = if root t == k then ts else t : deleteTree ts k
+
+-- O(1) mit pointer
+-- verringert den Schlüssel von Knoten v auf k
+-- {-@ decreasekey :: Ord a => FibHeap a -> v:a -> {k:a | k < v} -> FibHeap a @-}
+-- decreasekey :: Ord a => FibHeap a -> a -> a -> FibHeap a
+-- decreasekey h v k = performCuts (replace h v k) k
+
+-- entfernt Knoten v mit Eintrag aus Q (ohne v zu suchen)
+-- delete :: Ord a => FibHeap a -> FibTree a -> FibHeap a
+-- delete h v = 
 
