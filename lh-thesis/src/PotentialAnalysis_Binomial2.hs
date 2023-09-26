@@ -45,11 +45,12 @@ data BiTree a =
 {-@ reflect link @-}
 {-@ link :: t1:BiTree a -> {t2:BiTree a | rank t2 = rank t1} -> {v:BiTree a | rank v = rank t1 + 1 && treeSize v = treeSize t1 + treeSize t2} @-}
 link :: (Ord a) => BiTree a -> BiTree a -> BiTree a
-link t1@(Node r1 x1 ts1 sz1) t2@(Node r2 x2 ts2 sz2)
+link t1@(Node r1 x1 ts1 sz1) t2@(Node _ x2 ts2 sz2)
     | x1 <= x2 =
         Node (r1 + 1) x1 (t2:ts1) (sz1 + sz2)
     | otherwise =
-        Node (r2 + 1) x2 (t1:ts2) (sz1 + sz2)
+        Node (r1 
+        + 1) x2 (t1:ts2) (sz1 + sz2)
 
 {-@ data Heap a = Heap { unheap :: [BiTree a] } @-}
 data Heap a =
@@ -57,6 +58,7 @@ data Heap a =
     deriving (Eq, Ord)
 
 -- potential as len of list
+-- TODO change to log n instead length
 {-@ measure pot @-}
 {-@ pot :: xs:[a] -> {v: Nat | v == (len xs)} @-}
 pot :: [a] -> Int
@@ -71,7 +73,7 @@ pott (x,xs) = pot xs + 1
 
 
 {-@ reflect insTree @-}
-{-@ insTree :: Ord a => t:BiTree a -> ts:[BiTree a] -> {ti:(Tick {zs:[BiTree a]| len zs <= len ts + 1}) | tcost (insTree t ts) + pot (tval (insTree t ts)) - pot ts == 2} @-}
+{-@ insTree :: t:BiTree a -> ts:[BiTree a] -> {ti:(Tick {zs:[BiTree a]| len zs <= len ts + 1}) | tcost (insTree t ts) + pot (tval (insTree t ts)) - pot ts == 2 && pot (tval (insTree t ts)) - pot ts <= 1} @-}
 insTree :: Ord a => BiTree a -> [BiTree a] -> Tick [BiTree a]
 insTree t [] = wait [t]
 insTree t ts@(t':ts')
@@ -79,27 +81,26 @@ insTree t ts@(t':ts')
     | rank t > rank t' = pure ((:) t') <*> insTree t ts' -- reflect doesn't work with lambda abstraction
     | otherwise = step 1 (insTree (link t t') ts')
 
-
-{-@ singleton :: Ord a => a -> Tick (Heap a) @-}
-singleton :: Ord a => a -> Tick (Heap a)
-singleton x = pure (Heap [Node 0 x [] 1])
+{-@ reflect singleton @-}
+{-@ singleton :: Ord a => a -> BiTree a @-}
+singleton :: Ord a => a -> BiTree a
+singleton x = Node 0 x [] 1
 
 -- O(1)
 {-@ reflect insert @-}
 {-@ insert :: x:a -> h:Heap a -> {ti:Tick (Heap a) | tcost (insert x h) + pot (unheap (tval (insert x h))) - pot (unheap h) = 2}  @-}
 insert :: Ord a => a -> Heap a -> Tick (Heap a)
-insert x (Heap ts) = pure makeHeap <*> insTree (Node 0 x [] 1) ts
+insert x (Heap ts) = pure makeHeap <*> insTree (singleton x) ts
 
  
 -- commented out to safe computation time
-{-
-{-@ unmakeHeap :: Ord a => ts:[BiTree a] -> {ts == unheap (makeHeap ts)}@-}
+{-@ unmakeHeap :: ts:[BiTree a] -> {ts == unheap (makeHeap ts)}@-}
 unmakeHeap :: Ord a => [BiTree a] -> Proof
 unmakeHeap ts
     = unheap (makeHeap ts)
     -- {defn. of makeHeap}
     === unheap (Heap ts)
-    -- {defn. od unheap}
+    -- {defn. of unheap}
     === ts
     *** QED
 
@@ -109,32 +110,30 @@ insertPot :: (Ord a) => a -> Heap a -> Proof
 insertPot x h@(Heap ts)
     = tcost (insert x h) + pot (unheap (tval (insert x h))) - pot (unheap h)
     -- {defn. of insert}
-    === tcost (pure makeHeap <*> insTree (Node 0 x [] 1) ts) + pot (unheap (tval (insert x h))) - pot (unheap h)
+    === tcost (pure makeHeap <*> insTree (singleton x) ts) + pot (unheap (tval (insert x h))) - pot (unheap h)
     -- {defn. of pure}
-    === tcost (Tick 0 makeHeap <*> insTree (Node 0 x [] 1) ts) + pot (unheap (tval (insert x h))) - pot (unheap h)
-    -- {cost of (<*>)}
- --   === tcost (Tick 0 makeHeap) + tcost (insTree (Node 0 x [] 1) ts) + pot (unheap (tval (insert x h))) - pot (unheap h)
-    -- {defn. of cost}
-    === 0 + tcost (insTree (Node 0 x [] 1) ts) + pot (unheap (tval (insert x h))) - pot (unheap h)
+    === tcost (Tick 0 makeHeap <*> insTree (singleton x) ts) + pot (unheap (tval (insert x h))) - pot (unheap h)
+   -- {defn. of cost}
+    === 0 + tcost (insTree (singleton x) ts) + pot (unheap (tval (insert x h))) - pot (unheap h)
     -- {arithmetic}
-    === tcost (insTree (Node 0 x [] 1) ts) + pot (unheap (tval (insert x h))) - pot (unheap h)
+    === tcost (insTree (singleton x) ts) + pot (unheap (tval (insert x h))) - pot (unheap h)
     -- {defn. of unheap}
-    === tcost (insTree (Node 0 x [] 1) ts) + pot (unheap (tval (insert x h))) - pot ts
+    === tcost (insTree (singleton x) ts) + pot (unheap (tval (insert x h))) - pot ts
     -- {defn. of insert}
-    === tcost (insTree (Node 0 x [] 1) ts) + pot (unheap (tval (pure makeHeap <*> insTree (Node 0 x [] 1) ts))) - pot ts
+    === tcost (insTree (singleton x) ts) + pot (unheap (tval (pure makeHeap <*> insTree (singleton x) ts))) - pot ts
     -- {val of (<*>)}
-    === tcost (insTree (Node 0 x [] 1) ts) + pot (unheap (tval (pure makeHeap) (tval (insTree (Node 0 x [] 1) ts)))) - pot ts
+    === tcost (insTree (singleton x) ts) + pot (unheap (tval (pure makeHeap) (tval (insTree (singleton x) ts)))) - pot ts
     -- {defn. of pure}
-    === tcost (insTree (Node 0 x [] 1) ts) + pot (unheap (tval (Tick 0 makeHeap) (tval (insTree (Node 0 x [] 1) ts)))) - pot ts
+    === tcost (insTree (singleton x) ts) + pot (unheap (tval (Tick 0 makeHeap) (tval (insTree (singleton x) ts)))) - pot ts
     -- {defn. of val}
-    === tcost (insTree (Node 0 x [] 1) ts) + pot (unheap (makeHeap (tval (insTree (Node 0 x [] 1) ts)))) - pot ts
-        ? unmakeHeap (tval (insTree (Node 0 x [] 1) ts))
+    === tcost (insTree (singleton x) ts) + pot (unheap (makeHeap (tval (insTree (singleton x) ts)))) - pot ts
+        ? unmakeHeap (tval (insTree (singleton x) ts))
         -- {defn. unmakeHeap}
-    === tcost (insTree (Node 0 x [] 1) ts) + pot (tval (insTree (Node 0 x [] 1) ts)) - pot ts
+    === tcost (insTree (singleton x) ts) + pot (tval (insTree (singleton x) ts)) - pot ts
     -- {defn. amortised cost insTree}
     === 2
     *** QED
--}
+
 
 -- tcost ti + pot (tval ti) - (pot ts1 + pot ts2) <= log n
 -- length of list is log n ==> log n = pot (tval ti)
@@ -148,6 +147,7 @@ mergeTree ts1@(t1:ts1') ts2@(t2:ts2')
     | rank t2 < rank t1 = pure ((:) t2) </> mergeTree ts1 ts2'
     | otherwise = waitN 2 (tval (insTree (link t1 t2) (tval (mergeTree ts1' ts2')))) -- !!CHEAT
     -- insTree (link t1 t2) RTick.=<< mergeTree ts1' ts2' -- worst case not amortized
+    -- TODO find out how to use amortized time here
 
 -- O(log n)
 {-@ reflect mergeHeap @-}
@@ -178,7 +178,7 @@ removeMinTree (t:ts) =
     else Tick (1 + tcost f) (t', t:ts')
     where 
         f = removeMinTree ts
-
+-- TODO rewrite without tval/tcost --> access to subformulas
 
 {-@ reflect findMin @-}
 {-@ findMin :: Ord a => h:NEHeap a -> {ti:Tick a | tcost (findMin h) <= pot (unheap h)} @-}

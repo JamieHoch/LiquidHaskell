@@ -40,19 +40,21 @@ data BiTree a =
         , treeSize :: Int
         }
 
+{-@ reflect link @-}
 {-@ link :: t1:BiTree a -> {t2:BiTree a | rank t2 = rank t1} -> {v:BiTree a | rank v = rank t1 + 1 && treeSize v = treeSize t1 + treeSize t2} @-}
 link :: (Ord a) => BiTree a -> BiTree a -> BiTree a
-link t1@(Node r1 x1 ts1 sz1) t2@(Node r2 x2 ts2 sz2)
+link t1@(Node r x1 ts1 sz1) t2@(Node _ x2 ts2 sz2)
     | x1 <= x2 =
-        Node (r1 + 1) x1 (t2:ts1) (sz1 + sz2)
+        Node (r + 1) x1 (t2:ts1) (sz1 + sz2)
     | otherwise =
-        Node (r2 + 1) x2 (t1:ts2) (sz1 + sz2)
+        Node (r + 1) x2 (t1:ts2) (sz1 + sz2)
 
 {-@ data Heap a = Heap { unheap :: [BiTree a] } @-}
 data Heap a = 
     Heap { unheap :: [BiTree a] }
 
-{-@ insTree :: BiTree a -> [BiTree a] -> [BiTree a] @-}
+{-@ reflect insTree @-}
+{-@ insTree :: t:BiTree a -> ts:[BiTree a] -> {zs:[BiTree a]| len zs <= len ts + 1} @-}
 insTree :: Ord a => BiTree a -> [BiTree a] -> [BiTree a]
 insTree t [] = [t]
 insTree t ts@(t':ts') 
@@ -65,14 +67,18 @@ insTree t ts@(t':ts')
 unlist :: [BiTree a] -> BiTree a
 unlist [t] = t
 
-{-@ singleton :: x:a -> {v: Heap a | len (unheap v) = 1 && rank (unlist (unheap v)) == 0 && root (unlist (unheap v)) == x && subtrees (unlist (unheap v)) == []} @-}
-singleton :: Ord a => a -> Heap a
-singleton x = Heap [Node 0 x [] 1]
+{-@ reflect singleton @-}
+{-@ singleton :: x:a -> {v: BiTree a | rank v == 0 && root v == x && subtrees v == []} @-}
+singleton :: Ord a => a -> BiTree a
+singleton x = Node 0 x [] 1
 
+{-@ reflect insert @-}
 {-@ insert :: a -> Heap a -> Heap a @-}
 insert :: Ord a => a -> Heap a -> Heap a
-insert x (Heap ts) = Heap (insTree (Node 0 x [] 1) ts)
+insert x (Heap ts) = Heap (insTree (singleton x) ts)
 
+{-@ reflect mergeTree @-}
+{-@ mergeTree :: ts1:[BiTree a] -> ts2:[BiTree a] -> {zs:[BiTree a] | len zs <= len ts1 + len ts2} @-}
 mergeTree :: Ord a => [BiTree a] -> [BiTree a] -> [BiTree a]
 mergeTree ts1 [] = ts1
 mergeTree [] ts2 = ts2
@@ -81,6 +87,7 @@ mergeTree ts1@(t1:ts1') ts2@(t2:ts2')
     | rank t2 < rank t1 = t2 : mergeTree ts1 ts2'
     | otherwise = insTree (link t1 t2) (mergeTree ts1' ts2')
 
+{-@ reflect mergeHeap @-}
 mergeHeap :: Ord a => Heap a -> Heap a -> Heap a
 mergeHeap (Heap ts1) (Heap ts2) = Heap (mergeTree ts1 ts2)
 
