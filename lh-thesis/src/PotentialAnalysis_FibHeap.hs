@@ -2,11 +2,13 @@
 --{-@ LIQUID "--exactdc" @-}
 {-@ LIQUID "--reflection" @-}
 {-@ LIQUID "--ple" @-}
-{-@ LIQUID "--no-termination" @-}
+{-@ LIQUID "--exact-data-con" @-}
+--{-@ LIQUID "--no-termination" @-}
 
 module PotentialAnalysis_FibHeap where
 import Prelude hiding (pure, (++), (<*>))
 import Language.Haskell.Liquid.RTick as RTick
+import Language.Haskell.Liquid.ProofCombinators
 
 {-@ type Pos = {v:Int | 0 < v} @-}
 {-@ type NEFibHeap = {v : FibHeap a | notEmptyFibHeap v} @-}
@@ -21,20 +23,22 @@ treeListSize (x:xs) = treeSize x + treeListSize xs
 {-@
 data FibTree [rank] a =
     Node
-        { rank :: Nat
+        { rank :: Pos
         , root :: a
-        , subtrees :: [FibTree a]
+        , subtrees :: {ts:[FibTree a] | True || condRank rank ts}
         , marked :: Bool
         , treeSize :: {v:Pos | v = 1 + treeListSize subtrees && v > 0}
+        , height :: Nat
         }
 @-}
 data FibTree a =
     Node
-        { rank :: Int -- depth of the tree
+        { rank :: Int -- height of the tree
         , root :: a -- the element
         , subtrees :: [FibTree a]
         , marked :: Bool
-        , treeSize :: Int
+        , treeSize :: Int -- number of Nodes of the tree
+        , height :: Int
     }
 
 {-@
@@ -69,26 +73,85 @@ makeHeap :: Tick (FibHeap a)
 makeHeap = pure E
 
 {-@ reflect log2 @-}
-{-@ log2 :: n:Nat -> Nat / [n]@-}
+{-@ log2 :: n:Pos -> v:Nat / [n]@-}
 log2 :: Int -> Int
-log2 n
-  | n <= 2   = 1
-  | otherwise = 1 + log2 (div n 2)
+log2 1 = 0
+log2 n = 1 + log2 (div n 2)
+
+{-@ reflect powerOfTwo @-}
+{-@ powerOfTwo :: Nat -> Pos @-}
+powerOfTwo :: Int -> Int
+powerOfTwo 0 = 1
+powerOfTwo n = 2 * (powerOfTwo (n - 1))
+
+{-@ logPowP :: n:Nat -> {log2 (powerOfTwo n) == n} @-}
+logPowP :: Int -> Proof
+logPowP 0
+    = log2 (powerOfTwo 0)
+    === log2 1
+    === 0
+    ***QED
+logPowP n
+    = log2 (powerOfTwo n)
+    === log2 (2 * powerOfTwo (n-1))
+    === 1 + log2 (div (2 * powerOfTwo (n-1)) 2)
+    === 1 + log2 (powerOfTwo (n-1)) ? logPowP (n-1)
+    === 1 + (n-1)
+    === n
+    ***QED
 
 {-@ predicate Rmin T = root (minTree T) @-}
 -- O(1)
 {-@ reflect singleton @-}
-{-@ singleton :: x:a -> {ti:Tick NEFibHeap | tcost (singleton x) + poth (tval (singleton x)) - pota x = 1 && poth (tval ti) = 1} @-}
+{-@ singleton :: x:a -> {ti:Tick {h:NEFibHeap | (numNodes h) + 1 == powerOfTwo (1 + 0) && len (trees h) == 0}| tcost (singleton x) + poth (tval (singleton x)) - pota x = 1 && poth (tval ti) = 1} @-}
 singleton :: a -> Tick (FibHeap a)
-singleton x = wait (FH (Node 1 x [] False 1) [] 1 0)
+singleton x = wait (FH (Node 1 x [] False 1 0) [] 1 0)
 
 -- O(1)
 {-@ reflect link @-}
-{-@ link :: t1:FibTree a -> {t2:FibTree a | rank t1 == rank t2} -> {t:Tick ({v:FibTree a | rank v == 1 + (rank t1) && (root v == root t1 && root t1 <= root t2 || root v == root t2 && root t2 <= root t1)}) | tcost t == 1} @-}
+{-@ link :: t1:FibTree a-> {t2:FibTree a | rank t1 == rank t2} -> {t:Tick ({v:FibTree a | rank v > rank t2}) | tcost t == 1} @-}
 link :: (Ord a) => FibTree a -> FibTree a -> Tick (FibTree a)
-link t1@(Node r x1 ts1 _ sz1) t2@(Node _ x2 ts2 _ sz2)
-    | x1 <= x2 = wait (Node (r+1) x1 (t2:ts1) False (sz1 + sz2))
-    | otherwise = wait (Node (r+1) x2 (t1:ts2) False (sz1 + sz2))
+link t1@(Node r x1 ts1 _ sz1 h1) t2@(Node _ x2 ts2 _ sz2 h2)
+    | x1 <= x2 = wait (Node (r+1) x1 (t2:ts1) False (sz1 + sz2) 0)
+    | otherwise = wait (Node (r+1) x2 (t1:ts2) False (sz1 + sz2) 0)
+
+{-@ reflect getNodes @-}
+getNodes :: FibHeap a -> Int
+getNodes E = 0
+getNodes h = numNodes h
+
+{-@ lenHeapListP :: h:NEFibHeap -> {len (heapToList h) == 1 + len (trees h)} @-}
+lenHeapListP :: FibHeap a -> Proof
+lenHeapListP h
+    = length (heapToList h)
+    === length (minTree h : trees h)
+    === 1 + length (trees h)
+    ***QED
+{-
+{-@ logP :: Ord a => h:FibHeap a -> {pot (heapToList h) == log2 (getNodes h)} @-}
+logP :: Ord a => FibHeap a -> Proof
+logP E 
+    = pot (heapToList E)
+    === pot []
+    === 0
+    === log2 0
+    === log2 (getNodes E)
+    *** QED
+logP h
+    = pot (heapToList h)
+    --- lemma needed: (numNodes h) + 1 == powerOfTwo (len (heapToList h)) OR
+    --- lemma needed: (numNodes h) + 1 == powerOfTwo (1 + len (trees h)) && len (heapToList h) == 1 + len (trees h)
+    --- lemma: logPowP
+    === log2 (numNodes h)
+    === log2 (getNodes h)
+    *** QED
+-}
+
+--{-@ reflect checkPot @-}
+checkPot :: Ord a => FibHeap a -> Bool
+checkPot h = numNodes h + 1 == 2^length (heapToList h)
+
+
 
 {-@ measure poth @-}
 {-@ poth :: h:FibHeap a -> {v:Nat | v == 0 && not notEmptyFibHeap h || v == len (trees h) + 1 + 2*markedNodes h}@-}
@@ -119,7 +182,6 @@ potn :: FibHeap a -> Int
 potn E = 0
 potn h = numNodes h
 
-
 -- O(1)
 {-@ reflect merge @-}
 {-@ merge :: h1:(FibHeap a) -> h2:NEFibHeap-> {ti:Tick NEFibHeap | tcost ti == 1 && tcost (merge h1 h2) + poth (tval (merge h1 h2)) - (poth h1 + poth h2) == 1} @-}
@@ -142,27 +204,24 @@ findMin :: (Ord a) => FibHeap a -> Tick a
 findMin h = wait (root (minTree h))
 
 -- geht t für ganze liste durch
--- O(log n)
+-- O(log n) && numNod ts + 1 == powerOfTwo (len ts)
 {-@ reflect meld @-}
-{-@ meld :: xs:[FibTree a] -> t:FibTree a -> {ti:Tick ({t:[FibTree a] | len t > 0})| tcost (meld xs t) + pot (tval (meld xs t)) - (pot xs) - pota t <= pot xs && pot (tval (meld xs t)) <= pot xs + 1} @-}
+{-@ meld :: xs:[FibTree a] -> t:FibTree a -> {ti:Tick ({ts:[FibTree a] | len ts > 0 && len ts <= len xs + 1})| tcost (meld xs t) + pot (tval (meld xs t)) - (pot xs) - pota t <= pot xs && pot (tval (meld xs t)) <= pot xs + 1} @-}
 meld :: Ord a => [FibTree a] -> FibTree a -> Tick [FibTree a]
 meld [] t = pure [t]
 meld (x:xs) t = if rank x == rank t then step 1 (meld xs (tval (link t x)))
                      else pure ((:) x) <*> meld xs t
+
 -- O(log n)
 -- ruft meld mit jedem element auf
 -- ACHTUNG! cheat weil kein pointer
 {-@ reflect consolidate @-}
-{-@ consolidate :: {xs:[FibTree a] | len xs > 0} -> {ti:Tick ({t:[FibTree a] | len t > 0}) | tcost (consolidate xs) + pot (tval (consolidate xs)) - pot xs <= pot xs && tcost (consolidate xs) <= pot xs && pot (tval (consolidate xs)) <= pot xs} @-}
+{-@ consolidate :: {xs:[FibTree a] | len xs > 0} -> {ti:Tick ({ts:[FibTree a] | len ts > 0 && len ts <= len xs}) | tcost (consolidate xs) + pot (tval (consolidate xs)) - pot xs <= pot xs && tcost (consolidate xs) <= pot xs && pot (tval (consolidate xs)) <= pot xs} @-}
 consolidate :: (Ord a) => [FibTree a] -> Tick [FibTree a]
 consolidate [x] = wait [x]
 consolidate (x:xs) = Tick (1 + tcost (consolidate xs)) (tval (meld (tval (consolidate xs)) x))
 --consolidate (x:xs) = RTick.wmap (help x) (consolidate xs)
 
-{-@ reflect help @-}
-{-@ help :: FibTree a -> [FibTree a] -> {t:[FibTree a] | len t > 0} @-}
-help :: (Ord a) => FibTree a -> [FibTree a] -> [FibTree a]
-help x c = tval (meld c x)
 {-
     consolidate mit foldl
     len v > 0 does not work because of  {-@ LIQUID "--reflection" @-} flag
@@ -184,7 +243,7 @@ extractMin (t:ts) =
 -- O(log n)
 {-@ deleteMin :: {h:NEFibHeap | not (marked (minTree h)) && numNodes h > 1 || (numNodes h == 1 && subtrees (minTree h) == [] && trees h == [])} -> ti:Tick (FibHeap a) @-}
 deleteMin :: (Ord a) => FibHeap a -> Tick (FibHeap a)
-deleteMin (FH (Node _ x [] _ _) [] _ _) = pure E
+deleteMin (FH (Node _ x [] _ _ _) [] _ _) = pure E
 deleteMin h@(FH minTr ts n m) = let (minTr', ts') = tval (extractMin $ tval (consolidate (subtrees minTr ++ ts))) in
    deleteMin' h (minTr', ts')
 
@@ -211,38 +270,80 @@ deleteMin' h@(FH minTr ts n m) (minTr', ts') = Tick (tcost (extractMin $ tval (c
 here delete is a tricky function because we do not have direct access via pointers 
 we also ran into some termination issues that can be solved with help of cconst and assertions
 -}
+{-@ reflect cond @-}
+cond :: Ord a => Int -> [FibTree a] -> Bool
+cond v [] = True
+cond v (t:ts) = v < height t && cond v ts
 
+{-@ reflect condRank @-}
+condRank :: Ord a => Int -> [FibTree a] -> Bool
+condRank r [] = True
+condRank r (t:ts) = r > rank t && cond r ts
+
+{-@ reflect getMaxRank @-}
+getMaxRank :: Ord a => [FibTree a] -> Int
+getMaxRank [] = 0
+getMaxRank (t:ts) = if rank t > getMaxRank ts then rank t else getMaxRank ts
+
+{-@ reflect heightCond' @-}
+heightCond' :: Ord a => [FibTree a] -> Bool
+heightCond' [] = True
+heightCond' (x:xs) = heightCond x (subtrees x) && heightCond' xs
+
+{-@ reflect heightCond @-}
+{-@ heightCond :: FibTree a -> [FibTree a] -> Bool @-}
+heightCond :: Ord a => FibTree a -> [FibTree a] -> Bool
+heightCond t [] = True
+heightCond t [s] = height t < height s
+heightCond t (s:subtr) = height t < height s && heightCond t subtr
+
+------------------------------------------------------------------------
 {-@ assume :: b:Bool -> {v:Bool | b } @-}
 assume :: Bool -> Bool
 assume x = undefined
 
+{-@ reflect assert @-}
 {-@ assert :: b:{Bool | b } -> Bool @-}
 assert :: Bool -> Bool
 assert x = x
 
+{-@ reflect cconst @-}
 cconst x y = y
 
 -- returns heap where v is replaced by k
 {-@ replace :: Ord a => ts:[FibTree a] -> a -> a -> {vs:[FibTree a] | len vs == len ts} / [treeListSize ts] @-}
 replace :: Ord a => [FibTree a] -> a -> a -> [FibTree a]
 replace [] v k = []
-replace [t@(Node r x ts mark sz)] v k = if x == v then [Node r k ts mark sz] else [Node r x (replace (subtrees t) v k) mark (1 + (treeListSize (replace (subtrees t) v k)))]
+replace [t@(Node r x ts mark sz h)] v k = if x == v then [Node r k ts mark sz h] else [Node r x (replace (subtrees t) v k) mark (1 + (treeListSize (replace (subtrees t) v k))) h]
 replace (t:ts) v k = cconst (assert (0 < treeListSize ts)) ( ((replace' t v k) : replace ts v k))
 
 {-@ replace' :: Ord a => t:FibTree a -> a -> a -> FibTree a / [treeSize t]@-}
 replace' :: Ord a => FibTree a -> a -> a -> FibTree a
-replace' t@(Node r x ts mark sz) v k = if x == v then Node r k ts mark sz else Node r x (replace (subtrees t) v k) mark (1 + (treeListSize (replace (subtrees t) v k)))
+replace' t@(Node r x ts mark sz h) v k = if x == v then Node r k ts mark sz h else Node r x (replace (subtrees t) v k) mark (1 + (treeListSize (replace (subtrees t) v k))) h
 
 -- returns total number of nodes in the tree list
+{-@ reflect numNod @-}
 {-@ numNod :: Ord a => ts:[FibTree a] -> {v:Int | v >= len ts} / [treeListSize ts] @-}
 numNod :: Ord a => [FibTree a] -> Int
 numNod [] = 0
 numNod [t] = cconst (assert (treeListSize (subtrees t) < (treeSize t))) (1 + numNod (subtrees t))
-numNod (t:ts) = cconst (assert (0 < treeListSize ts)) (cconst (assert ( treeSize t < treeListSize (t:ts))) (numNod' t + numNod ts))
+numNod (t:ts) = cconst (assert (0 < treeListSize ts)) (cconst (assert ( treeSize t < treeListSize (t:ts))) ((1 + numNod (subtrees t)) + numNod ts))
 
 {-@ numNod' :: t:FibTree a -> {v:Int | v > 0} / [treeSize t] @-}
 numNod' :: Ord a => FibTree a -> Int
 numNod' t = cconst (assert (treeListSize (subtrees t) < treeSize t)) (1 + numNod (subtrees t))
+
+{-@ reflect increaseheight @-}
+{-@ increaseheight :: t:FibTree a -> {v:FibTree a | height v > 0} / [treeSize t] @-}
+increaseheight :: Ord a => FibTree a -> FibTree a
+increaseheight t = cconst (assert (treeListSize (subtrees t) < treeSize t)) (Node (rank t) (root t) (increaseheight' (subtrees t)) (marked t) (1 + treeListSize (increaseheight' (subtrees t))) (height t + 1))
+
+{-@ reflect increaseheight' @-}
+{-@ increaseheight' :: ts:[FibTree a] -> [FibTree a] / [treeListSize ts] @-}
+increaseheight' :: Ord a => [FibTree a] -> [FibTree a]
+increaseheight' [] = []
+increaseheight' [t] = cconst (assert (treeListSize (subtrees t) < treeSize t)) [Node (rank t) (root t) (increaseheight' (subtrees t)) (marked t) (1 + treeListSize (increaseheight' (subtrees t))) (height t + 1)]
+increaseheight' (t:ts) = cconst (assert (0 < treeListSize ts)) (cconst (assert ( treeSize t < treeListSize (t:ts))) ((Node (rank t) (root t) (increaseheight' (subtrees t)) (marked t) (1 + treeListSize (increaseheight' (subtrees t))) (height t + 1)) : increaseheight' ts))
 
 -- retuns number of marked nodes in the tree list
 {-@ markNod :: ts:[FibTree a] -> {v:Int | v >= 0} / [treeListSize ts]@-}
@@ -256,58 +357,59 @@ markNod' :: Ord a => FibTree a -> Int
 markNod' t = cconst (assert (treeListSize (subtrees t) < treeSize t)) (if marked t then (1 + markNod (subtrees t)) else markNod (subtrees t))
 
 -- checks if tree t contain element k
-{-@ contains :: t:FibTree a -> a -> Bool / [treeSize t] @-}
-contains :: Ord a => FibTree a -> a -> Bool
-contains t k = cconst (assert (treeListSize (subtrees t) < treeSize t)) (root t == k || containsL (subtrees t) k)
+{-@ reflect contains @-}
+{-@ contains :: t:FibTree a -> FibTree a -> Bool / [treeSize t] @-}
+contains :: Ord a => FibTree a -> FibTree a -> Bool
+contains t t2 = cconst (assert (treeListSize (subtrees t) < treeSize t)) (root t == root t2 || containsL (subtrees t) t2)
 
-{-@ containsL :: ts:[FibTree a] -> a -> Bool / [treeListSize ts] @-}
-containsL :: Ord a =>  [FibTree a] -> a -> Bool
-containsL [] k = False
-containsL [t] k = cconst (assert (treeListSize (subtrees t) < treeSize t)) (root t == k || containsL (subtrees t) k)
-containsL (t:ts) k = cconst (assert (0 < treeListSize ts)) (cconst (assert ( treeSize t < treeListSize (t:ts))) (contains t k || containsL ts k))
+{-@ reflect containsL @-}
+{-@ containsL :: ts:[FibTree a] -> FibTree a -> Bool / [treeListSize ts] @-}
+containsL :: Ord a =>  [FibTree a] -> FibTree a -> Bool
+containsL [] _ = False
+containsL [t] t2 = cconst (assert (treeListSize (subtrees t) < treeSize t)) (root t == root t2 || containsL (subtrees t) t2)
+containsL (t:ts) t2 = cconst (assert (0 < treeListSize ts)) (cconst (assert ( treeSize t < treeListSize (t:ts))) ((root t == root t2 || containsL (subtrees t) t2) || containsL ts t2))
 
--- checks if one of the subtrees ts has root k
-checkSubRoots :: Ord a => [FibTree a] -> a -> Bool
-checkSubRoots [] _ = False
-checkSubRoots (t:ts) k = (root t == k) || checkSubRoots ts k
+{-@ test :: {t:FibTree a | not (subtrees t == [])} -> Bool @-}
+test :: Ord a => FibTree a -> Bool
+test t = True
 
--- returns parent element of k
-{-@ getParentVal :: t:FibTree a -> a -> [a] / [treeSize t] @-}
-getParentVal :: Ord a => FibTree a -> a -> [a]
-getParentVal t k = cconst (assert (treeListSize (subtrees t) < treeSize t)) (if checkSubRoots (subtrees t) k then [root t] else getParentVal' (subtrees t) k)
-
-{-@ getParentVal' ::  ts:[FibTree a] -> a -> [a] / [treeListSize ts] @-}
-getParentVal' :: Ord a => [FibTree a] -> a -> [a]
-getParentVal' [] _ = []
-getParentVal' [t] k = cconst (assert (treeListSize (subtrees t) < treeSize t)) (if checkSubRoots (subtrees t) k then [root t] else getParentVal' (subtrees t) k)
-getParentVal' (t:ts) k = cconst (assert (0 < treeListSize ts)) (cconst (assert ( treeSize t < treeListSize (t:ts))) (getParentVal t k ++ getParentVal' ts k))
+-- checks if one of the subtrees of ts contains t2 in the root
+{-@ checkSubRoots2 :: [FibTree a] -> t2:FibTree a -> Bool @-}
+checkSubRoots2 :: Ord a => [FibTree a] -> FibTree a -> Bool
+checkSubRoots2 [] _ = False
+checkSubRoots2 (t:ts) t2 = root t == root t2 || checkSubRoots2 ts t2
 
 -- returns parent tree of k
-{-@ getParent :: t:FibTree a -> FibTree a -> {vs:[FibTree a] | len vs == 0 || True} / [treeSize t] @-}
+{-@ getParent :: t:FibTree a -> {t2:FibTree a | contains t t2} -> {vs:[FibTree a] | len vs <= 1} / [treeSize t] @-}
 getParent :: Ord a => FibTree a -> FibTree a -> [FibTree a]
-getParent t t2 = cconst (assert (treeListSize (subtrees t) < treeSize t)) (if checkSubRoots (subtrees t) (root t2) then [t] else getParent' (subtrees t) t2)
+getParent t t2 = cconst (assert (treeListSize (subtrees t) < treeSize t)) (if contains t t2 && checkSubRoots2 (subtrees t) t2 then [t] else if containsL (subtrees t) t2 then getParent' (subtrees t) t2 else [])
 
-{-@ getParent' ::  ts:[FibTree a] -> FibTree a -> vs:[FibTree a] / [treeListSize ts] @-}
+{-@ getParent' :: ts:[FibTree a] -> {t2:FibTree a | containsL ts t2} -> {vs:[FibTree a]| len vs <= 1} / [treeListSize ts] @-}
 getParent' :: Ord a => [FibTree a] -> FibTree a -> [FibTree a]
-getParent' [] _ = []
-getParent' [t] t2 = cconst (assert (treeListSize (subtrees t) < treeSize t)) (if checkSubRoots (subtrees t) (root t2) then [t] else getParent' (subtrees t) t2)
-getParent' (t:ts) t2 = cconst (assert (0 < treeListSize ts)) (cconst (assert ( treeSize t < treeListSize (t:ts))) (getParent t t2 ++ getParent' ts t2))
+getParent' [t] t2 = cconst (assert (treeListSize (subtrees t) < treeSize t)) (if checkSubRoots2 (subtrees t) t2 then [t] else if containsL (subtrees t) t2 then getParent' (subtrees t) t2 else [])
+getParent' (t:ts) t2 = cconst (assert (0 < treeListSize ts && treeSize t < treeListSize (t:ts))) (if contains t t2 then getParent t t2 else if containsL ts t2 then getParent' ts t2 else [])
 
-{-@ getParentList :: t1:FibTree a -> t2:FibTree a -> [FibTree a] / [treeSize t1 - treeSize t2] @-}
-getParentList :: Ord a => FibTree a -> FibTree a -> [FibTree a]
-getParentList t x = if length p == 0 then p else p -- ++ getParentList t (myhead p)
-    where p = getParent t x
+{-@ getParentMaybe :: Ord a => t:FibTree a -> t2:FibTree a -> Maybe ({v:FibTree a | True || getDepth t v <= getDepth t t2 }) / [treeSize t] @-}
+getParentMaybe :: Ord a => FibTree a -> FibTree a -> Maybe (FibTree a)
+getParentMaybe t t2 = cconst (assert (treeListSize (subtrees t) < treeSize t)) (if checkSubRoots2 (subtrees t) t2 then Just t else getParentMaybe' (subtrees t) t2)
 
-{-
-parentValList :: Ord a => [FibTree a] -> a -> [a]
-parentValList ts x = if length p > 0 then p ++ parentValList ts (head p) else [] -- termination
-    where p = getParentVal' ts x
--}
+{-@ getParentMaybe' :: ts:[FibTree a] -> t2:FibTree a -> Maybe (FibTree a) / [treeListSize ts] @-}
+getParentMaybe' :: Ord a => [FibTree a] -> FibTree a -> Maybe (FibTree a)
+getParentMaybe' [] _ = Nothing 
+getParentMaybe' [t] t2 = cconst (assert (treeListSize (subtrees t) < treeSize t)) (if checkSubRoots2 (subtrees t) t2 then Just t else getParentMaybe' (subtrees t) t2 )
+getParentMaybe' (t:ts) t2 = cconst (assert (0 < treeListSize ts && treeSize t < treeListSize (t:ts))) (if contains t t2 then getParentMaybe t t2 else getParentMaybe' ts t2)
 
-{-@ reflect myhead @-}
-{-@ myhead :: Ord a => {v:[FibTree a] | len v > 0} -> FibTree a @-}
-myhead :: [FibTree a] -> FibTree a
-myhead (x:_) = x
+-- returns depth of root of t2 which is a subtree of t
+{-@ reflect getDepth @-}
+{-@ getDepth :: t:FibTree a -> {t2:FibTree a | contains t t2} -> {v:Nat | getDepth t t2 >= getDepth t t} / [treeSize t] @-}
+getDepth :: Ord a => FibTree a -> FibTree a -> Int
+getDepth t t2 = cconst (assert (treeListSize (subtrees t) < treeSize t)) (if root t == root t2 then 0 else 1 + getDepth' (subtrees t) t2)
+
+{-@ reflect getDepth' @-}
+{-@ getDepth' :: ts:[FibTree a] -> {t2:FibTree a | containsL ts t2} -> {v:Nat | v >= 0 && getDepth' ts t2 >= getDepth' ts (head ts)} / [treeListSize ts] @-}
+getDepth' :: Ord a => [FibTree a] -> FibTree a -> Int
+getDepth' [t] t2 = cconst (assert (treeListSize (subtrees t) < treeSize t)) (if root t == root t2 then 0 else 1 + getDepth' (subtrees t) t2)
+getDepth' (t:ts) t2 = cconst (assert (0 < treeListSize ts && treeSize t < treeListSize (t:ts))) (if contains t t2 && root t == root t2 then 0 else if contains t t2 then 1 + getDepth' (subtrees t) t2 else getDepth' ts t2)
 
 -- returns subtree with root k
 {-@ getTreeList ::  t:FibTree a -> a -> [FibTree a] / [treeSize t] @-}
@@ -322,17 +424,18 @@ getTreeList' (t:ts) k = cconst (assert (0 < treeListSize ts)) (cconst (assert ( 
 
 -- returns tree with deleted subtree of root k
 deleteSubTree :: Ord a => FibTree a -> a -> [FibTree a]
-deleteSubTree t k = if root t == k then [] else [(Node (rank t) (root t) subtrs (marked t) (1 + (treeListSize subtrs)))]
+deleteSubTree t k = if root t == k then [] else [(Node (rank t) (root t) subtrs (marked t) (1 + (treeListSize subtrs)) (height t))]
     where subtrs = deleteSubTree' (subtrees t) k
 
 {-@ deleteSubTree' :: ts:[FibTree a] -> a -> vs:[FibTree a] / [treeListSize ts] @-}
 deleteSubTree' :: Ord a => [FibTree a] -> a -> [FibTree a]
 deleteSubTree' [] k = []
-deleteSubTree' ((Node r x sub mk sz):ts) k = if x == k then [] else [Node r x (deleteSubTree' sub k) mk (1 + (treeListSize (deleteSubTree' sub k)))] ++ (deleteSubTree' ts k)
+deleteSubTree' ((Node r x sub mk sz h):ts) k = if x == k then [] else [Node r x (deleteSubTree' sub k) mk (1 + (treeListSize (deleteSubTree' sub k))) h] ++ (deleteSubTree' ts k)
 
 
-{-@ heapToList :: h:FibHeap a -> {vs:[FibTree a] | not notEmptyFibHeap h || len vs > 0} @-}
-heapToList :: Ord a => FibHeap a -> [FibTree a]
+{-@ reflect heapToList @-}
+{-@ heapToList :: h:FibHeap a -> {vs:[FibTree a] | not notEmptyFibHeap h || len vs == 1 + len (trees h)} @-}
+heapToList :: FibHeap a -> [FibTree a]
 heapToList E = []
 heapToList h = minTree h : trees h
 
@@ -342,25 +445,6 @@ listToHeap [] = E
 listToHeap ts = FH (fst newH) (snd newH) (numNod ts) (markNod ts)
    where newH = tval (extractMin ts)
 
-
-{-@ performCuts :: {ts:[FibTree a] | len ts > 0} -> a -> {vs:[FibTree a] | len vs > 0} @-}
-performCuts :: Ord a => [FibTree a] -> a -> [FibTree a]
-performCuts ts k = if length x > 0 && length y > 0 
-    then if k < root (head y) 
-        then cascadingCut (cut ts (head x)) (head y) 
-        else ts 
-    else ts
-    where y = if length x > 0 then getParent' ts (head x) else []
-          x = getTreeList' ts k
-
-{-@ cascadingCut :: {ts:[FibTree a] | len ts > 0} -> FibTree a -> {vs:[FibTree a] | len vs > 0} @-}
-cascadingCut :: Ord a => [FibTree a] -> FibTree a -> [FibTree a]
-cascadingCut ts y = if length (getParent' ts y) > 0 && isUnmarked ts (root y) 
-        then mark' ts (root y)
-        else if length (getParent' ts y) > 0 
-        then cascadingCut (cut ts y) (head (getParent' ts y)) -- termination
-        else ts
-
 -- remove x from current position and add it unmarked to root list
 {-@ cut :: ts:[FibTree a] -> FibTree a -> {vs:[FibTree a] | len vs > 0} @-}
 cut :: Ord a => [FibTree a] -> FibTree a -> [FibTree a]
@@ -368,20 +452,38 @@ cut ts x = (unmarkNode x) : (deleteSubTree' ts (root x))
 
 -- unmarks root node
 unmarkNode :: Ord a => FibTree a -> FibTree a
-unmarkNode t@(Node _ _ _ False _) = t
-unmarkNode t@(Node r x ts True sz) = Node r x ts False sz
+unmarkNode t@(Node _ _ _ False _ _) = t
+unmarkNode t@(Node r x ts True sz h) = Node r x ts False sz h
 
 -- checks if node with root k is unmarked
 isUnmarked :: Ord a => [FibTree a] -> a -> Bool
 isUnmarked [] k = False
-isUnmarked (t@(Node r x sub mk sz):ts) k = if x == k then mk == False else (isUnmarked sub k) || (isUnmarked ts k)
+isUnmarked (t@(Node r x sub mk sz _):ts) k = if x == k then mk == False else (isUnmarked sub k) || (isUnmarked ts k)
 
 -- marks node with value k in heap h
 {-@ mark' :: ts:[FibTree a] -> a -> {vs:[FibTree a] | len ts > 0 <=> len vs > 0} / [treeListSize ts] @-}
 mark' :: Ord a => [FibTree a] -> a -> [FibTree a]
 mark' [] _ = []
-mark' [Node r x sub mk sz] k = if x == k then [Node r x sub True sz] else [(Node r x (mark' sub k) mk (1 + (treeListSize (mark' sub k))))]
-mark' (t@(Node r x sub mk sz):ts) k = if x == k then ((Node r x sub True sz):ts) else (Node r x (mark' sub k) mk (1 + (treeListSize (mark' sub k)))) : (mark' ts k)
+mark' [Node r x sub mk sz h] k = if x == k then [Node r x sub True sz h] else [(Node r x (mark' sub k) mk (1 + (treeListSize (mark' sub k))) h)]
+mark' (t@(Node r x sub mk sz h):ts) k = if x == k then ((Node r x sub True sz h):ts) else (Node r x (mark' sub k) mk (1 + (treeListSize (mark' sub k))) h) : (mark' ts k)
+
+{-
+{-@ cascadingCut :: {ts:[FibTree a] | len ts > 0} -> t:FibTree a -> {vs:[FibTree a] | len vs > 0} @-} -- / [getdepth t]
+cascadingCut :: Ord a => [FibTree a] -> FibTree a -> [FibTree a]
+cascadingCut ts y
+  | length (getParent' ts y) > 0 && isUnmarked ts (root y) = mark' ts (root y)
+  | length (getParent' ts y) > 0 = cconst (assert (getDepth' ts ((head (getParent' ts y))) < getDepth' ts y)) (cascadingCut (cut ts y) (head (getParent' ts y))) -- termination (getParent' ts y) < y
+  | otherwise = ts
+
+{-@ performCuts :: {ts:[FibTree a] | len ts > 0} -> a -> {vs:[FibTree a] | len vs > 0} @-}
+performCuts :: Ord a => [FibTree a] -> a -> [FibTree a]
+performCuts ts k = if not (null x) && not (null y)
+    then if k < root (head y)
+        then cascadingCut (cut ts (head x)) (head y)
+        else ts
+    else ts
+    where y = if not (null x) then getParent' ts (head x) else []
+          x = getTreeList' ts k
 
 -- O(1) with pointer
 -- decreases root of v to k
@@ -392,5 +494,5 @@ decreasekey h v k = if k < v then listToHeap (performCuts (replace (heapToList h
 -- deletes note with root v from h
 {-@ delete :: NEFibHeap -> a -> FibHeap a @-}
 delete :: (Num a, Ord a) => FibHeap a -> a -> FibHeap a
-delete h v = listToHeap (snd (tval (extractMin (heapToList (decreasekey h v 0)))))
-
+delete h v = listToHeap (snd (tval (extractMin (heapToList (decreasekey h v 0))))) 
+-}
