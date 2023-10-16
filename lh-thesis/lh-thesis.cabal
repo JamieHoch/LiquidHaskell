@@ -15,8 +15,6 @@ build-type:     Simple
 
 library
   exposed-modules:
-      PopPush
-      Binomial
       FibHeap
       MyBinomial
       PotentialAnalysis_FibHeap

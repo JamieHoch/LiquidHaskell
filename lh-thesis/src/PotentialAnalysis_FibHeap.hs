@@ -2,7 +2,7 @@
 --{-@ LIQUID "--exactdc" @-}
 {-@ LIQUID "--reflection" @-}
 {-@ LIQUID "--ple" @-}
-{-@ LIQUID "--no-termination" @-}
+{- LIQUID "--no-termination" @-}
 
 module PotentialAnalysis_FibHeap where
 import Prelude hiding (pure, (++), (<*>))
@@ -353,13 +353,26 @@ performCuts ts k = if length x > 0 && length y > 0
     where y = if length x > 0 then getParent' ts (head x) else []
           x = getTreeList' ts k
 
-{-@ cascadingCut :: {ts:[FibTree a] | len ts > 0} -> FibTree a -> {vs:[FibTree a] | len vs > 0} @-}
+{-@ cascadingCut :: {ts:[FibTree a] | len ts > 0} -> y:FibTree a -> {vs:[FibTree a] | len vs > 0} / [getDepth y] @-}
 cascadingCut :: Ord a => [FibTree a] -> FibTree a -> [FibTree a]
-cascadingCut ts y = if length (getParent' ts y) > 0 && isUnmarked ts (root y) 
-        then mark' ts (root y)
-        else if length (getParent' ts y) > 0 
-        then cascadingCut (cut ts y) (head (getParent' ts y)) -- termination
-        else ts
+cascadingCut ts y 
+  = case getParentMaybe ts y of 
+      Nothing -> ts
+      Just p -> if isUnmarked ts (root y) 
+                  then mark' ts (root y)
+                  else cascadingCut (cut ts y) p -- termination
+
+
+{-@ getParentMaybe :: Ord a => [FibTree a] -> y:FibTree a -> Maybe ({v:FibTree a | getDepth v < getDepth y }) @-}
+getParentMaybe :: Ord a => [FibTree a] -> FibTree a -> Maybe (FibTree a)
+getParentMaybe = undefined 
+
+
+{-@ reflect getDepth @-}
+{-@ getDepth :: Ord a => FibTree a -> Nat @-}
+getDepth :: Ord a => FibTree a -> Int
+getDepth _ = 0 -- TODO 
+
 
 -- remove x from current position and add it unmarked to root list
 {-@ cut :: ts:[FibTree a] -> FibTree a -> {vs:[FibTree a] | len vs > 0} @-}

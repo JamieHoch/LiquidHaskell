@@ -1,7 +1,7 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
 <html>
 <head>
-<title>/home/jamie/Documents/Master/MasterThesis/master-thesis-project/lh-thesis/src/FibHeap.hs</title>
+<title>/Users/niki.vazou/tmp/jamie/LiquidHaskell/lh-thesis/src/FibHeap.hs</title>
 </head>
 <head>
 <link type='text/css' rel='stylesheet' href='liquid.css' />
@@ -10,13 +10,432 @@
 <body>
 <hr>
 Put mouse over identifiers to see inferred types
-<pre><span class=hs-linenum>1: </span><a class=annot href="#"><span class=annottext>GHC.Types.Module</span><span class='hs-keyword'>module</span></a> <span class='hs-conid'>FibHeap</span> <span class='hs-keyword'>where</span>
-<span class=hs-linenum>2: </span>
-<span class=hs-linenum>3: </span><span class='hs-keyword'>{-@</span> <span class='hs-keyword'>type</span> <span class='hs-conid'>Pos</span> <span class='hs-keyglyph'>=</span> <span class='hs-layout'>{</span><span class='hs-varid'>v</span><span class='hs-conop'>:</span><span class='hs-conid'>Int</span> <span class='hs-keyglyph'>|</span> <span class='hs-num'>0</span> <span class='hs-varop'>&lt;</span> <span class='hs-varid'>v</span><span class='hs-layout'>}</span> <span class='hs-keyword'>@-}</span>
-<span class=hs-linenum>4: </span>
-<span class=hs-linenum>5: </span><span class='hs-keyword'>{-@</span> <span class='hs-varid'>incr</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Pos</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Pos</span> <span class='hs-keyword'>@-}</span>
-<span class=hs-linenum>6: </span><span class='hs-definition'>incr</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Int</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Int</span>
-<span class=hs-linenum>7: </span><a class=annot href="#"><span class=annottext>{VV : GHC.Types.Int | 0 &lt; VV} -&gt; {VV : GHC.Types.Int | 0 &lt; VV}</span><span class='hs-definition'>incr</span></a> <a class=annot href="#"><span class=annottext>{VV : GHC.Types.Int | 0 &lt; VV}</span><span class='hs-varid'>x</span></a> <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>{v : GHC.Types.Int | v == x
-                     &amp;&amp; 0 &lt; v}</span><span class='hs-varid'>x</span></a> <span class='hs-varop'>+</span> <a class=annot href="#"><span class=annottext>GHC.Types.Int</span><span class='hs-num'>1</span></a></pre>
+<pre><span class=hs-linenum>  1: </span><a class=annot href="#"><span class=annottext>GHC.Types.Module</span><span class='hs-comment'>-- Automatically generate singleton types for data constructors</span></a>
+<span class=hs-linenum>  2: </span><span class='hs-keyword'>{-@</span> <span class='hs-conid'>LIQUID</span> <span class='hs-str'>"--exactdc"</span> <span class='hs-keyword'>@-}</span>
+<span class=hs-linenum>  3: </span>
+<span class=hs-linenum>  4: </span><span class='hs-keyword'>module</span> <span class='hs-conid'>FibHeap</span> <span class='hs-keyword'>where</span>
+<span class=hs-linenum>  5: </span><span class='hs-comment'>-- mergeable heap: makeHeap, insert, findMin, extractMin, union=merge</span>
+<span class=hs-linenum>  6: </span><span class='hs-keyword'>import</span> <span class='hs-conid'>Prelude</span>
+<span class=hs-linenum>  7: </span>
+<span class=hs-linenum>  8: </span><span class='hs-keyword'>{-@</span> <span class='hs-keyword'>type</span> <span class='hs-conid'>Pos</span> <span class='hs-keyglyph'>=</span> <span class='hs-layout'>{</span><span class='hs-varid'>v</span><span class='hs-conop'>:</span><span class='hs-conid'>Int</span> <span class='hs-keyglyph'>|</span> <span class='hs-num'>0</span> <span class='hs-varop'>&lt;</span> <span class='hs-varid'>v</span><span class='hs-layout'>}</span> <span class='hs-keyword'>@-}</span>
+<span class=hs-linenum>  9: </span><span class='hs-keyword'>{-@</span> <span class='hs-keyword'>type</span> <span class='hs-conid'>NEFibHeap</span> <span class='hs-keyglyph'>=</span> <span class='hs-layout'>{</span><span class='hs-varid'>v</span> <span class='hs-conop'>:</span> <span class='hs-conid'>FibHeap</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>|</span> <span class='hs-varid'>notEmptyFibHeap</span> <span class='hs-varid'>v</span><span class='hs-layout'>}</span> <span class='hs-keyword'>@-}</span>
+<span class=hs-linenum> 10: </span><span class='hs-keyword'>{-@</span> <span class='hs-keyword'>type</span> <span class='hs-conid'>EFibHeap</span> <span class='hs-keyglyph'>=</span> <span class='hs-layout'>{</span><span class='hs-varid'>v</span> <span class='hs-conop'>:</span> <span class='hs-conid'>FibHeap</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>|</span> <span class='hs-varid'>not</span> <span class='hs-layout'>(</span><span class='hs-varid'>notEmptyFibHeap</span> <span class='hs-varid'>v</span><span class='hs-layout'>)</span><span class='hs-layout'>}</span> <span class='hs-keyword'>@-}</span>
+<span class=hs-linenum> 11: </span>
+<span class=hs-linenum> 12: </span><span class='hs-keyword'>{-@</span>
+<span class=hs-linenum> 13: </span><span class='hs-keyword'>data</span> <span class='hs-conid'>FibTree</span> <span class='hs-keyglyph'>[</span><span class='hs-varid'>rank</span><span class='hs-keyglyph'>]</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>=</span>
+<span class=hs-linenum> 14: </span>    <span class='hs-conid'>Node</span>
+<span class=hs-linenum> 15: </span>        <span class='hs-layout'>{</span> <span class='hs-varid'>rank</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Nat</span>
+<span class=hs-linenum> 16: </span>        <span class='hs-layout'>,</span> <span class='hs-varid'>root</span> <span class='hs-keyglyph'>::</span> <span class='hs-varid'>a</span>
+<span class=hs-linenum> 17: </span>        <span class='hs-layout'>,</span> <span class='hs-varid'>subtrees</span> <span class='hs-keyglyph'>::</span> <span class='hs-keyglyph'>[</span><span class='hs-conid'>FibTree</span> <span class='hs-varid'>a</span><span class='hs-keyglyph'>]</span>
+<span class=hs-linenum> 18: </span>        <span class='hs-layout'>,</span> <span class='hs-varid'>marked</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Bool</span>
+<span class=hs-linenum> 19: </span>        <span class='hs-layout'>}</span>
+<span class=hs-linenum> 20: </span><span class='hs-keyword'>@-}</span>
+<span class=hs-linenum> 21: </span><span class='hs-keyword'>data</span> <span class='hs-conid'>FibTree</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>=</span>
+<span class=hs-linenum> 22: </span>    <span class='hs-conid'>Node</span> 
+<span class=hs-linenum> 23: </span>        <span class='hs-layout'>{</span> <span class='hs-varid'>rank</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Int</span> <span class='hs-comment'>-- size of the tree</span>
+<span class=hs-linenum> 24: </span>        <span class='hs-layout'>,</span> <span class='hs-varid'>root</span> <span class='hs-keyglyph'>::</span> <span class='hs-varid'>a</span> <span class='hs-comment'>-- the element</span>
+<span class=hs-linenum> 25: </span>        <span class='hs-layout'>,</span> <span class='hs-varid'>subtrees</span> <span class='hs-keyglyph'>::</span> <span class='hs-keyglyph'>[</span><span class='hs-conid'>FibTree</span> <span class='hs-varid'>a</span><span class='hs-keyglyph'>]</span>
+<span class=hs-linenum> 26: </span>        <span class='hs-layout'>,</span> <span class='hs-varid'>marked</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Bool</span>
+<span class=hs-linenum> 27: </span>    <span class='hs-layout'>}</span>
+<span class=hs-linenum> 28: </span>
+<span class=hs-linenum> 29: </span><span class='hs-keyword'>{-@</span>
+<span class=hs-linenum> 30: </span><span class='hs-keyword'>data</span> <span class='hs-conid'>FibHeap</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>=</span>
+<span class=hs-linenum> 31: </span>    <span class='hs-conid'>E</span> <span class='hs-keyglyph'>|</span> <span class='hs-conid'>FH</span> <span class='hs-layout'>{</span>  <span class='hs-varid'>minTree</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>FibTree</span> <span class='hs-varid'>a</span>
+<span class=hs-linenum> 32: </span>            <span class='hs-layout'>,</span> <span class='hs-varid'>trees</span> <span class='hs-keyglyph'>::</span> <span class='hs-keyglyph'>[</span><span class='hs-conid'>FibTree</span> <span class='hs-varid'>a</span><span class='hs-keyglyph'>]</span>
+<span class=hs-linenum> 33: </span>            <span class='hs-layout'>}</span>
+<span class=hs-linenum> 34: </span><span class='hs-keyword'>@-}</span>
+<span class=hs-linenum> 35: </span><span class='hs-keyword'>data</span> <span class='hs-conid'>FibHeap</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>=</span> <span class='hs-conid'>E</span> <span class='hs-keyglyph'>|</span> <span class='hs-conid'>FH</span> <span class='hs-layout'>{</span> <span class='hs-varid'>minTree</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>FibTree</span> <span class='hs-varid'>a</span>
+<span class=hs-linenum> 36: </span>                        <span class='hs-layout'>,</span> <span class='hs-varid'>trees</span> <span class='hs-keyglyph'>::</span> <span class='hs-keyglyph'>[</span><span class='hs-conid'>FibTree</span> <span class='hs-varid'>a</span><span class='hs-keyglyph'>]</span> <span class='hs-comment'>--wihout minTree</span>
+<span class=hs-linenum> 37: </span>                     <span class='hs-layout'>}</span>
+<span class=hs-linenum> 38: </span>
+<span class=hs-linenum> 39: </span><span class='hs-keyword'>{-@</span> <span class='hs-varid'>measure</span> <span class='hs-varid'>notEmptyFibHeap</span> <span class='hs-keyword'>@-}</span>
+<span class=hs-linenum> 40: </span><span class='hs-definition'>notEmptyFibHeap</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>FibHeap</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Bool</span>
+<span class=hs-linenum> 41: </span><a class=annot href="#"><span class=annottext>forall a .
+x1:(FibHeap.FibHeap a) -&gt; {VV : GHC.Types.Bool | VV &lt;=&gt; notEmptyFibHeap x1}</span><span class='hs-definition'>notEmptyFibHeap</span></a> <span class='hs-conid'>E</span> <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>{v : GHC.Types.Bool | not v
+                      &amp;&amp; v == False}</span><span class='hs-conid'>False</span></a>
+<span class=hs-linenum> 42: </span><span class='hs-definition'>notEmptyFibHeap</span> <span class='hs-keyword'>_</span> <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>{v : GHC.Types.Bool | v
+                      &amp;&amp; v == True}</span><span class='hs-conid'>True</span></a>
+<span class=hs-linenum> 43: </span>
+<span class=hs-linenum> 44: </span><span class='hs-keyword'>{-@</span> <span class='hs-varid'>measure</span> <span class='hs-varid'>isEmptyFibHeap</span> <span class='hs-keyword'>@-}</span>
+<span class=hs-linenum> 45: </span><span class='hs-keyword'>{-@</span> <span class='hs-varid'>isEmptyFibHeap</span> <span class='hs-keyglyph'>::</span> <span class='hs-varid'>t</span><span class='hs-conop'>:</span><span class='hs-layout'>(</span><span class='hs-conid'>FibHeap</span> <span class='hs-varid'>a</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-keyword'>{t':</span><span class='hs-conid'>Bool</span> <span class='hs-keyword'>| (not (notEmptyFibHeap t) &amp;&amp; t') || (notEmptyFibHeap t &amp;&amp; not t')}</span> <span class='hs-keyword'>@-}</span>
+<span class=hs-linenum> 46: </span><span class='hs-definition'>isEmptyFibHeap</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>FibHeap</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Bool</span> 
+<span class=hs-linenum> 47: </span><a class=annot href="#"><span class=annottext>forall a .
+x1:(FibHeap.FibHeap a) -&gt; {VV : GHC.Types.Bool | (VV
+                                                  &amp;&amp; not (notEmptyFibHeap x1))
+                                                 || (notEmptyFibHeap x1
+                                                     &amp;&amp; not VV)
+                                                 &amp;&amp; (VV &lt;=&gt; isEmptyFibHeap x1)}</span><span class='hs-definition'>isEmptyFibHeap</span></a> <span class='hs-conid'>E</span> <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>{v : GHC.Types.Bool | v
+                      &amp;&amp; v == True}</span><span class='hs-conid'>True</span></a>
+<span class=hs-linenum> 48: </span><span class='hs-definition'>isEmptyFibHeap</span> <span class='hs-keyword'>_</span> <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>{v : GHC.Types.Bool | not v
+                      &amp;&amp; v == False}</span><span class='hs-conid'>False</span></a>
+<span class=hs-linenum> 49: </span>
+<span class=hs-linenum> 50: </span>
+<span class=hs-linenum> 51: </span><span class='hs-keyword'>{-@</span> <span class='hs-varid'>makeHeap</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>EFibHeap</span> <span class='hs-keyword'>@-}</span>
+<span class=hs-linenum> 52: </span><span class='hs-definition'>makeHeap</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>FibHeap</span> <span class='hs-varid'>a</span>
+<span class=hs-linenum> 53: </span><a class=annot href="#"><span class=annottext>forall a . {VV : (FibHeap.FibHeap a) | not (notEmptyFibHeap VV)}</span><span class='hs-definition'>makeHeap</span></a> <span class='hs-keyglyph'>=</span> <span class='hs-conid'>E</span>
+<span class=hs-linenum> 54: </span>
+<span class=hs-linenum> 55: </span><span class='hs-keyword'>{-@</span> <span class='hs-varid'>predicate</span> <span class='hs-conid'>Rmin</span> <span class='hs-conid'>H</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>root</span> <span class='hs-layout'>(</span><span class='hs-varid'>minTree</span> <span class='hs-conid'>H</span><span class='hs-layout'>)</span> <span class='hs-keyword'>@-}</span>
+<span class=hs-linenum> 56: </span>
+<span class=hs-linenum> 57: </span><span class='hs-keyword'>{-@</span> <span class='hs-varid'>singleton</span> <span class='hs-keyglyph'>::</span> <span class='hs-varid'>x</span><span class='hs-conop'>:</span><span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-keyword'>{v:</span> <span class='hs-conid'>NEFibHeap</span> <span class='hs-keyword'>| Rmin v == x &amp;&amp; trees v = [] &amp;&amp; subtrees (minTree v) = [] &amp;&amp; rank (minTree v) = 1}</span><span class='hs-keyword'>@-}</span>
+<span class=hs-linenum> 58: </span><span class='hs-definition'>singleton</span> <span class='hs-keyglyph'>::</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>FibHeap</span> <span class='hs-varid'>a</span>
+<span class=hs-linenum> 59: </span><a class=annot href="#"><span class=annottext>forall a .
+x1:a -&gt; {VV : (FibHeap.FibHeap a) | notEmptyFibHeap VV
+                                    &amp;&amp; rank (minTree VV) == 1
+                                    &amp;&amp; root (minTree VV) == x1
+                                    &amp;&amp; subtrees (minTree VV) == []
+                                    &amp;&amp; trees VV == []}</span><span class='hs-definition'>singleton</span></a> <a class=annot href="#"><span class=annottext>a</span><span class='hs-varid'>x</span></a> <span class='hs-keyglyph'>=</span> <span class='hs-conid'>FH</span> <a class=annot href="#"><span class=annottext>{v : (FibHeap.FibTree a) | marked v == False
+                           &amp;&amp; root v == x}</span><span class='hs-layout'>(</span></a><span class='hs-conid'>Node</span> <a class=annot href="#"><span class=annottext>GHC.Types.Int</span><span class='hs-num'>1</span></a> <a class=annot href="#"><span class=annottext>{VV : a | VV == x}</span><span class='hs-varid'>x</span></a> <a class=annot href="#"><span class=annottext>{VV : forall a &lt;p :: a a -&gt; Bool&gt;.
+      {v : [a]&lt;\x3 VV -&gt; {VV : a&lt;p x3&gt; | true}&gt; | v == []
+                                                  &amp;&amp; len v == 0
+                                                  &amp;&amp; lsize v == 0} | VV == []}</span><span class='hs-conid'>[]</span></a> <a class=annot href="#"><span class=annottext>{v : GHC.Types.Bool | not v
+                      &amp;&amp; v == False}</span><span class='hs-conid'>False</span></a><span class='hs-layout'>)</span> <a class=annot href="#"><span class=annottext>{VV : forall a &lt;p :: a a -&gt; Bool&gt;.
+      {v : [a]&lt;\x3 VV -&gt; {VV : a&lt;p x3&gt; | true}&gt; | v == []
+                                                  &amp;&amp; len v == 0
+                                                  &amp;&amp; lsize v == 0} | VV == []}</span><span class='hs-conid'>[]</span></a>
+<span class=hs-linenum> 60: </span>
+<span class=hs-linenum> 61: </span><span class='hs-keyword'>{-@</span> <span class='hs-varid'>link</span> <span class='hs-keyglyph'>::</span> <span class='hs-varid'>t1</span><span class='hs-conop'>:</span><span class='hs-conid'>FibTree</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-keyword'>{t2:</span><span class='hs-conid'>FibTree</span> <span class='hs-varid'>a</span> <span class='hs-keyword'>| rank t1 == rank t2}</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-keyword'>{v:</span><span class='hs-conid'>FibTree</span> <span class='hs-varid'>a</span> <span class='hs-keyword'>| rank v == 1 + (rank t1) &amp;&amp; (root v == root t1 &amp;&amp; root t1 &lt;= root t2 || root v == root t2 &amp;&amp; root t2 &lt;= root t1)}</span> <span class='hs-keyword'>@-}</span>
+<span class=hs-linenum> 62: </span><span class='hs-definition'>link</span> <span class='hs-keyglyph'>::</span> <span class='hs-layout'>(</span><span class='hs-conid'>Ord</span> <span class='hs-varid'>a</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>=&gt;</span> <span class='hs-conid'>FibTree</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>FibTree</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>FibTree</span> <span class='hs-varid'>a</span>
+<span class=hs-linenum> 63: </span><a class=annot href="#"><span class=annottext>forall a .
+(GHC.Classes.Ord&lt;[]&gt; a) =&gt;
+x2:(FibHeap.FibTree a) -&gt; x3:{t2 : (FibHeap.FibTree a) | rank x2 == rank t2} -&gt; {v : (FibHeap.FibTree a) | (root v == root x2
+                                                                                                            &amp;&amp; root x2 &lt;= root x3)
+                                                                                                           || (root v == root x3
+                                                                                                               &amp;&amp; root x3 &lt;= root x2)
+                                                                                                           &amp;&amp; rank v == 1 + rank x2}</span><span class='hs-definition'>link</span></a> <a class=annot href="#"><span class=annottext>(FibHeap.FibTree a)</span><span class='hs-varid'>t1</span></a><span class='hs-keyglyph'>@</span><span class='hs-layout'>(</span><span class='hs-conid'>Node</span> <span class='hs-varid'>r</span> <span class='hs-varid'>x</span> <span class='hs-varid'>ts1</span> <span class='hs-keyword'>_</span><span class='hs-layout'>)</span> <a class=annot href="#"><span class=annottext>{t2 : (FibHeap.FibTree a) | rank t1 == rank t2}</span><span class='hs-varid'>t2</span></a><span class='hs-keyglyph'>@</span><span class='hs-layout'>(</span><span class='hs-conid'>Node</span> <span class='hs-keyword'>_</span> <span class='hs-varid'>y</span>  <span class='hs-varid'>ts2</span> <span class='hs-keyword'>_</span><span class='hs-layout'>)</span>
+<span class=hs-linenum> 64: </span>    <span class='hs-keyglyph'>|</span> <a class=annot href="#"><span class=annottext>{VV : a | VV == x}</span><span class='hs-varid'>x</span></a> <span class='hs-varop'>&lt;</span> <a class=annot href="#"><span class=annottext>{VV : a | VV == y}</span><span class='hs-varid'>y</span></a> <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>{VV : forall a .
+      x1:{v : GHC.Types.Int | v &gt;= 0} -&gt; x2:a -&gt; x3:[(FibHeap.FibTree a)] -&gt; x4:GHC.Types.Bool -&gt; {v : (FibHeap.FibTree a) | v == Node x1 x2 x3 x4
+                                                                                                                             &amp;&amp; marked v == x4
+                                                                                                                             &amp;&amp; rank v == x1
+                                                                                                                             &amp;&amp; root v == x2
+                                                                                                                             &amp;&amp; size v == pow2 x1
+                                                                                                                             &amp;&amp; subtrees v == x3} | VV == Node}</span><span class='hs-conid'>Node</span></a> <a class=annot href="#"><span class=annottext>GHC.Types.Int</span><span class='hs-layout'>(</span></a><a class=annot href="#"><span class=annottext>{v : GHC.Types.Int | v == r
+                     &amp;&amp; v &gt;= 0}</span><span class='hs-varid'>r</span></a> <span class='hs-varop'>+</span> <a class=annot href="#"><span class=annottext>GHC.Types.Int</span><span class='hs-num'>1</span></a><span class='hs-layout'>)</span> <a class=annot href="#"><span class=annottext>{VV : a | VV == x}</span><span class='hs-varid'>x</span></a> <a class=annot href="#"><span class=annottext>{v : [(FibHeap.FibTree a)] | len v == 1 + len ts1
+                             &amp;&amp; lqdc##$select v == ts1
+                             &amp;&amp; tail v == ts1}</span><span class='hs-layout'>(</span></a><a class=annot href="#"><span class=annottext>{v : (FibHeap.FibTree a) | v == t2
+                           &amp;&amp; rank t1 == rank v
+                           &amp;&amp; root v == y
+                           &amp;&amp; size v == pow2 (rank v)
+                           &amp;&amp; subtrees v == ts2
+                           &amp;&amp; 0 &lt; size v}</span><span class='hs-varid'>t2</span></a><span class='hs-conop'>:</span><a class=annot href="#"><span class=annottext>{v : [(FibHeap.FibTree a)] | v == ts1
+                             &amp;&amp; len v &gt;= 0
+                             &amp;&amp; lsize v &gt;= len v}</span><span class='hs-varid'>ts1</span></a><span class='hs-layout'>)</span> <a class=annot href="#"><span class=annottext>{v : GHC.Types.Bool | not v
+                      &amp;&amp; v == False}</span><span class='hs-conid'>False</span></a>
+<span class=hs-linenum> 65: </span>    <span class='hs-keyglyph'>|</span> <span class='hs-varid'>otherwise</span> <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>{VV : forall a .
+      x1:{v : GHC.Types.Int | v &gt;= 0} -&gt; x2:a -&gt; x3:[(FibHeap.FibTree a)] -&gt; x4:GHC.Types.Bool -&gt; {v : (FibHeap.FibTree a) | v == Node x1 x2 x3 x4
+                                                                                                                             &amp;&amp; marked v == x4
+                                                                                                                             &amp;&amp; rank v == x1
+                                                                                                                             &amp;&amp; root v == x2
+                                                                                                                             &amp;&amp; size v == pow2 x1
+                                                                                                                             &amp;&amp; subtrees v == x3} | VV == Node}</span><span class='hs-conid'>Node</span></a> <a class=annot href="#"><span class=annottext>GHC.Types.Int</span><span class='hs-layout'>(</span></a><a class=annot href="#"><span class=annottext>{v : GHC.Types.Int | v == r
+                     &amp;&amp; v &gt;= 0}</span><span class='hs-varid'>r</span></a> <span class='hs-varop'>+</span> <a class=annot href="#"><span class=annottext>GHC.Types.Int</span><span class='hs-num'>1</span></a><span class='hs-layout'>)</span> <a class=annot href="#"><span class=annottext>{VV : a | VV == y}</span><span class='hs-varid'>y</span></a> <a class=annot href="#"><span class=annottext>{v : [(FibHeap.FibTree a)] | len v == 1 + len ts2
+                             &amp;&amp; lqdc##$select v == ts2
+                             &amp;&amp; tail v == ts2}</span><span class='hs-layout'>(</span></a><a class=annot href="#"><span class=annottext>{v : (FibHeap.FibTree a) | v == t1
+                           &amp;&amp; rank v == r
+                           &amp;&amp; root v == x
+                           &amp;&amp; size v == pow2 r
+                           &amp;&amp; size v == pow2 (rank v)
+                           &amp;&amp; subtrees v == ts1
+                           &amp;&amp; 0 &lt; size v}</span><span class='hs-varid'>t1</span></a><span class='hs-conop'>:</span><a class=annot href="#"><span class=annottext>{v : [(FibHeap.FibTree a)] | v == ts2
+                             &amp;&amp; len v &gt;= 0
+                             &amp;&amp; lsize v &gt;= len v}</span><span class='hs-varid'>ts2</span></a><span class='hs-layout'>)</span> <a class=annot href="#"><span class=annottext>{v : GHC.Types.Bool | not v
+                      &amp;&amp; v == False}</span><span class='hs-conid'>False</span></a>
+<span class=hs-linenum> 66: </span>
+<span class=hs-linenum> 67: </span>
+<span class=hs-linenum> 68: </span><span class='hs-comment'>-- constant time</span>
+<span class=hs-linenum> 69: </span><span class='hs-keyword'>{-@</span> <span class='hs-varid'>merge</span> <span class='hs-keyglyph'>::</span> <span class='hs-varid'>h1</span><span class='hs-conop'>:</span><span class='hs-layout'>(</span><span class='hs-conid'>FibHeap</span> <span class='hs-varid'>a</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-varid'>h2</span><span class='hs-conop'>:</span><span class='hs-conid'>NEFibHeap</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-keyword'>{v:</span><span class='hs-conid'>NEFibHeap</span> <span class='hs-keyword'>| Rmin v == Rmin h1 &amp;&amp; Rmin h1 &lt; Rmin h2 || Rmin v == Rmin h2 &amp;&amp; (Rmin h2 &lt;= Rmin h1 || not notEmptyFibHeap h1)}</span> <span class='hs-keyword'>@-}</span>
+<span class=hs-linenum> 70: </span><span class='hs-definition'>merge</span><span class='hs-keyglyph'>::</span> <span class='hs-layout'>(</span><span class='hs-conid'>Ord</span> <span class='hs-varid'>a</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>=&gt;</span> <span class='hs-conid'>FibHeap</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>FibHeap</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>FibHeap</span> <span class='hs-varid'>a</span>
+<span class=hs-linenum> 71: </span><a class=annot href="#"><span class=annottext>forall a .
+(GHC.Classes.Ord&lt;[]&gt; a) =&gt;
+x2:(FibHeap.FibHeap a) -&gt; x3:{VV : (FibHeap.FibHeap a) | notEmptyFibHeap VV} -&gt; {VV : (FibHeap.FibHeap a) | notEmptyFibHeap VV
+                                                                                                            &amp;&amp; (root (minTree VV) == root (minTree x2)
+                                                                                                                &amp;&amp; root (minTree x2) &lt; root (minTree x3))
+                                                                                                               || ((root (minTree x3) &lt;= root (minTree x2)
+                                                                                                                    || not (notEmptyFibHeap x2))
+                                                                                                                   &amp;&amp; root (minTree VV) == root (minTree x3))}</span><span class='hs-definition'>merge</span></a> <span class='hs-conid'>E</span> <a class=annot href="#"><span class=annottext>{VV : (FibHeap.FibHeap a) | notEmptyFibHeap VV}</span><span class='hs-varid'>h</span></a> <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>{v : (FibHeap.FibHeap a) | notEmptyFibHeap v
+                           &amp;&amp; (isEmptyFibHeap v
+                               &amp;&amp; not (notEmptyFibHeap v))
+                              || (notEmptyFibHeap v
+                                  &amp;&amp; not (isEmptyFibHeap v))
+                           &amp;&amp; v == h
+                           &amp;&amp; 0 &lt; fibsize v}</span><span class='hs-varid'>h</span></a>
+<span class=hs-linenum> 72: </span><span class='hs-definition'>merge</span> <span class='hs-varid'>h1</span><span class='hs-keyglyph'>@</span><span class='hs-layout'>(</span><span class='hs-conid'>FH</span> <span class='hs-varid'>minTr1</span> <span class='hs-varid'>ts1</span><span class='hs-layout'>)</span> <span class='hs-varid'>h2</span><span class='hs-keyglyph'>@</span><span class='hs-layout'>(</span><span class='hs-conid'>FH</span> <span class='hs-varid'>minTr2</span> <span class='hs-varid'>ts2</span><span class='hs-layout'>)</span>
+<span class=hs-linenum> 73: </span>    <span class='hs-keyglyph'>|</span> <a class=annot href="#"><span class=annottext>{VV : a | VV == root minTr1}</span><span class='hs-varid'>root</span></a> <a class=annot href="#"><span class=annottext>{v : (FibHeap.FibTree a) | v == minTr1
+                           &amp;&amp; size v == pow2 (rank v)
+                           &amp;&amp; 0 &lt; size v}</span><span class='hs-varid'>minTr1</span></a> <span class='hs-varop'>&lt;</span> <a class=annot href="#"><span class=annottext>{VV : a | VV == root minTr2}</span><span class='hs-varid'>root</span></a> <a class=annot href="#"><span class=annottext>{v : (FibHeap.FibTree a) | v == minTr2
+                           &amp;&amp; size v == pow2 (rank v)
+                           &amp;&amp; 0 &lt; size v}</span><span class='hs-varid'>minTr2</span></a> <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>{VV : forall a .
+      x1:(FibHeap.FibTree a) -&gt; x2:[(FibHeap.FibTree a)] -&gt; {v : (FibHeap.FibHeap a) | notEmptyFibHeap v
+                                                                                       &amp;&amp; not (isEmptyFibHeap v)
+                                                                                       &amp;&amp; v == FH x1 x2
+                                                                                       &amp;&amp; fibsize v == size x1 + lsize x2
+                                                                                       &amp;&amp; minTree v == x1
+                                                                                       &amp;&amp; trees v == x2} | VV == FH}</span><span class='hs-conid'>FH</span></a> <a class=annot href="#"><span class=annottext>{v : (FibHeap.FibTree a) | v == minTr1
+                           &amp;&amp; size v == pow2 (rank v)
+                           &amp;&amp; 0 &lt; size v}</span><span class='hs-varid'>minTr1</span></a> <a class=annot href="#"><span class=annottext>{v : [(FibHeap.FibTree a)] | head v == minTr2
+                             &amp;&amp; lqdc##$select v == minTr2}</span><span class='hs-layout'>(</span></a><a class=annot href="#"><span class=annottext>{v : (FibHeap.FibTree a) | v == minTr2
+                           &amp;&amp; size v == pow2 (rank v)
+                           &amp;&amp; 0 &lt; size v}</span><span class='hs-varid'>minTr2</span></a><span class='hs-conop'>:</span><a class=annot href="#"><span class=annottext>{v : [(FibHeap.FibTree a)] | v == ts2
+                             &amp;&amp; len v &gt;= 0
+                             &amp;&amp; lsize v &gt;= len v}</span><span class='hs-varid'>ts2</span></a><span class='hs-varop'>++</span><a class=annot href="#"><span class=annottext>{v : [(FibHeap.FibTree a)] | v == ts1
+                             &amp;&amp; len v &gt;= 0
+                             &amp;&amp; lsize v &gt;= len v}</span><span class='hs-varid'>ts1</span></a><span class='hs-layout'>)</span>
+<span class=hs-linenum> 74: </span>    <span class='hs-keyglyph'>|</span> <span class='hs-varid'>otherwise</span> <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>{VV : forall a .
+      x1:(FibHeap.FibTree a) -&gt; x2:[(FibHeap.FibTree a)] -&gt; {v : (FibHeap.FibHeap a) | notEmptyFibHeap v
+                                                                                       &amp;&amp; not (isEmptyFibHeap v)
+                                                                                       &amp;&amp; v == FH x1 x2
+                                                                                       &amp;&amp; fibsize v == size x1 + lsize x2
+                                                                                       &amp;&amp; minTree v == x1
+                                                                                       &amp;&amp; trees v == x2} | VV == FH}</span><span class='hs-conid'>FH</span></a> <a class=annot href="#"><span class=annottext>{v : (FibHeap.FibTree a) | v == minTr2
+                           &amp;&amp; size v == pow2 (rank v)
+                           &amp;&amp; 0 &lt; size v}</span><span class='hs-varid'>minTr2</span></a> <a class=annot href="#"><span class=annottext>{v : [(FibHeap.FibTree a)] | head v == minTr1
+                             &amp;&amp; lqdc##$select v == minTr1}</span><span class='hs-layout'>(</span></a><a class=annot href="#"><span class=annottext>{v : (FibHeap.FibTree a) | v == minTr1
+                           &amp;&amp; size v == pow2 (rank v)
+                           &amp;&amp; 0 &lt; size v}</span><span class='hs-varid'>minTr1</span></a><span class='hs-conop'>:</span><a class=annot href="#"><span class=annottext>{v : [(FibHeap.FibTree a)] | v == ts1
+                             &amp;&amp; len v &gt;= 0
+                             &amp;&amp; lsize v &gt;= len v}</span><span class='hs-varid'>ts1</span></a><span class='hs-varop'>++</span><a class=annot href="#"><span class=annottext>{v : [(FibHeap.FibTree a)] | v == ts2
+                             &amp;&amp; len v &gt;= 0
+                             &amp;&amp; lsize v &gt;= len v}</span><span class='hs-varid'>ts2</span></a><span class='hs-layout'>)</span>
+<span class=hs-linenum> 75: </span>
+<span class=hs-linenum> 76: </span><span class='hs-comment'>-- constant time  | Rmin v == Rmin t &amp;&amp; Rmin t &lt;= x || Rmin v == x &amp;&amp; (x &lt;= Rmin t || isEmptyFibHeap t)} </span>
+<span class=hs-linenum> 77: </span><span class='hs-keyword'>{-@</span> <span class='hs-varid'>insert</span> <span class='hs-keyglyph'>::</span> <span class='hs-varid'>t</span><span class='hs-conop'>:</span><span class='hs-layout'>(</span><span class='hs-conid'>FibHeap</span> <span class='hs-varid'>a</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-varid'>x</span><span class='hs-conop'>:</span><span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-keyword'>{v:</span><span class='hs-conid'>NEFibHeap</span> <span class='hs-keyword'>| Rmin v == Rmin t &amp;&amp; Rmin t &lt;= x || Rmin v == x &amp;&amp; (x &lt;= Rmin t || not notEmptyFibHeap t)}</span>  <span class='hs-keyword'>@-}</span>
+<span class=hs-linenum> 78: </span><span class='hs-definition'>insert</span> <span class='hs-keyglyph'>::</span> <span class='hs-layout'>(</span><span class='hs-conid'>Ord</span> <span class='hs-varid'>a</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>=&gt;</span> <span class='hs-conid'>FibHeap</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>FibHeap</span> <span class='hs-varid'>a</span>
+<span class=hs-linenum> 79: </span><a class=annot href="#"><span class=annottext>forall a .
+(GHC.Classes.Ord&lt;[]&gt; a) =&gt;
+x2:(FibHeap.FibHeap a) -&gt; x3:a -&gt; {VV : (FibHeap.FibHeap a) | notEmptyFibHeap VV
+                                                              &amp;&amp; (root (minTree VV) == root (minTree x2)
+                                                                  &amp;&amp; root (minTree x2) &lt;= x3)
+                                                                 || ((x3 &lt;= root (minTree x2)
+                                                                      || not (notEmptyFibHeap x2))
+                                                                     &amp;&amp; root (minTree VV) == x3)}</span><span class='hs-definition'>insert</span></a> <a class=annot href="#"><span class=annottext>(FibHeap.FibHeap a)</span><span class='hs-varid'>h</span></a> <a class=annot href="#"><span class=annottext>a</span><span class='hs-varid'>x</span></a> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>merge</span> <a class=annot href="#"><span class=annottext>{v : (FibHeap.FibHeap a) | (isEmptyFibHeap v
+                            &amp;&amp; not (notEmptyFibHeap v))
+                           || (notEmptyFibHeap v
+                               &amp;&amp; not (isEmptyFibHeap v))
+                           &amp;&amp; v == h
+                           &amp;&amp; 0 &lt; fibsize v}</span><span class='hs-varid'>h</span></a> <a class=annot href="#"><span class=annottext>{v : (FibHeap.FibHeap a) | notEmptyFibHeap v
+                           &amp;&amp; rank (minTree v) == 1
+                           &amp;&amp; root (minTree v) == x
+                           &amp;&amp; subtrees (minTree v) == []
+                           &amp;&amp; trees v == []}</span><span class='hs-layout'>(</span></a><span class='hs-varid'>singleton</span> <a class=annot href="#"><span class=annottext>{VV : a | VV == x}</span><span class='hs-varid'>x</span></a><span class='hs-layout'>)</span>
+<span class=hs-linenum> 80: </span>
+<span class=hs-linenum> 81: </span><span class='hs-definition'>findMin</span> <span class='hs-keyglyph'>::</span> <span class='hs-layout'>(</span><span class='hs-conid'>Ord</span> <span class='hs-varid'>a</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>=&gt;</span> <span class='hs-conid'>FibHeap</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-varid'>a</span>
+<span class=hs-linenum> 82: </span><a class=annot href="#"><span class=annottext>forall a . (GHC.Classes.Ord&lt;[]&gt; a) =&gt; (FibHeap.FibHeap a) -&gt; a</span><span class='hs-definition'>findMin</span></a> <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>{VV : forall a .
+      x1:(FibHeap.FibTree a) -&gt; {VV : a | VV == root x1} | VV == root}</span><span class='hs-varid'>root</span></a> <span class='hs-varop'>.</span> <a class=annot href="#"><span class=annottext>{VV : forall a .
+      x1:(FibHeap.FibHeap a) -&gt; {v : (FibHeap.FibTree a) | v == minTree x1} | VV == minTree}</span><span class='hs-varid'>minTree</span></a>
+<span class=hs-linenum> 83: </span>
+<span class=hs-linenum> 84: </span><span class='hs-keyword'>{-@</span> <span class='hs-varid'>consolidate</span> <span class='hs-keyglyph'>::</span> <span class='hs-keyword'>{t:</span><span class='hs-keyglyph'>[</span><span class='hs-conid'>FibTree</span> <span class='hs-varid'>a</span><span class='hs-keyglyph'>]</span> <span class='hs-keyword'>| len t &gt; 0}</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-keyword'>{v:</span><span class='hs-keyglyph'>[</span><span class='hs-conid'>FibTree</span> <span class='hs-varid'>a</span><span class='hs-keyglyph'>]</span> <span class='hs-keyword'>| len v &gt; 0}</span> <span class='hs-keyword'>@-}</span>
+<span class=hs-linenum> 85: </span><span class='hs-definition'>consolidate</span> <span class='hs-keyglyph'>::</span> <span class='hs-layout'>(</span><span class='hs-conid'>Ord</span> <span class='hs-varid'>a</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>=&gt;</span> <span class='hs-keyglyph'>[</span><span class='hs-conid'>FibTree</span> <span class='hs-varid'>a</span><span class='hs-keyglyph'>]</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-keyglyph'>[</span><span class='hs-conid'>FibTree</span> <span class='hs-varid'>a</span><span class='hs-keyglyph'>]</span>
+<span class=hs-linenum> 86: </span><a class=annot href="#"><span class=annottext>forall a .
+(GHC.Classes.Ord&lt;[]&gt; a) =&gt;
+{t : [(FibHeap.FibTree a)] | len t &gt; 0} -&gt; {v : [(FibHeap.FibTree a)] | len v &gt; 0}</span><span class='hs-definition'>consolidate</span></a> <span class='hs-keyglyph'>[</span><span class='hs-varid'>x</span><span class='hs-keyglyph'>]</span> <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>{v : [(FibHeap.FibTree a)] | v == []
+                             &amp;&amp; len v == 0
+                             &amp;&amp; lsize v == 0}</span><span class='hs-keyglyph'>[</span></a><a class=annot href="#"><span class=annottext>{v : (FibHeap.FibTree a) | v == x
+                           &amp;&amp; size v == pow2 (rank v)
+                           &amp;&amp; 0 &lt; size v}</span><span class='hs-varid'>x</span></a><span class='hs-keyglyph'>]</span>
+<span class=hs-linenum> 87: </span><span class='hs-definition'>consolidate</span> <span class='hs-layout'>(</span><span class='hs-varid'>x</span><span class='hs-conop'>:</span><span class='hs-varid'>xs</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>{v : (Data.Foldable.Foldable []) | v == $fFoldable[]}</span><span class='hs-varid'>foldl</span></a> <a class=annot href="#"><span class=annottext>x1:[(FibHeap.FibTree a)] -&gt; (FibHeap.FibTree a) -&gt; {v : [(FibHeap.FibTree a)] | len v &gt; 0
+                                                                                &amp;&amp; len v &lt;= len x1 + 1}</span><span class='hs-varid'>meld</span></a> <a class=annot href="#"><span class=annottext>{v : [(FibHeap.FibTree a)] | head v == x
+                             &amp;&amp; lqdc##$select v == x}</span><span class='hs-keyglyph'>[</span></a><a class=annot href="#"><span class=annottext>{v : (FibHeap.FibTree a) | v == x
+                           &amp;&amp; size v == pow2 (rank v)
+                           &amp;&amp; 0 &lt; size v}</span><span class='hs-varid'>x</span></a><span class='hs-keyglyph'>]</span> <a class=annot href="#"><span class=annottext>{v : [(FibHeap.FibTree a)] | len v &gt;= 0
+                             &amp;&amp; lsize v &gt;= len v}</span><span class='hs-varid'>xs</span></a> <span class='hs-keyword'>where</span>
+<span class=hs-linenum> 88: </span>    <span class='hs-keyword'>{-@</span> <span class='hs-varid'>meld</span> <span class='hs-keyglyph'>::</span> <span class='hs-varid'>t</span><span class='hs-conop'>:</span><span class='hs-keyglyph'>[</span><span class='hs-conid'>FibTree</span> <span class='hs-varid'>a</span><span class='hs-keyglyph'>]</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>FibTree</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-keyword'>{v:</span><span class='hs-keyglyph'>[</span><span class='hs-conid'>FibTree</span> <span class='hs-varid'>a</span><span class='hs-keyglyph'>]</span> <span class='hs-keyword'>| len v &gt; 0 &amp;&amp; len v &lt;= len t + 1}</span><span class='hs-keyword'>@-}</span>
+<span class=hs-linenum> 89: </span>    <span class='hs-varid'>meld</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Ord</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>=&gt;</span> <span class='hs-keyglyph'>[</span><span class='hs-conid'>FibTree</span> <span class='hs-varid'>a</span><span class='hs-keyglyph'>]</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>FibTree</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-keyglyph'>[</span><span class='hs-conid'>FibTree</span> <span class='hs-varid'>a</span><span class='hs-keyglyph'>]</span>
+<span class=hs-linenum> 90: </span>    <a class=annot href="#"><span class=annottext>forall a .
+(GHC.Classes.Ord&lt;[]&gt; a) =&gt;
+x2:[(FibHeap.FibTree a)] -&gt; (FibHeap.FibTree a) -&gt; {v : [(FibHeap.FibTree a)] | len v &gt; 0
+                                                                                &amp;&amp; len v &lt;= len x2 + 1}</span><span class='hs-varid'>meld</span></a> <span class='hs-conid'>[]</span> <a class=annot href="#"><span class=annottext>(FibHeap.FibTree a)</span><span class='hs-varid'>x</span></a> <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>{v : [(FibHeap.FibTree a)] | v == []
+                             &amp;&amp; len v == 0
+                             &amp;&amp; lsize v == 0}</span><span class='hs-keyglyph'>[</span></a><a class=annot href="#"><span class=annottext>{v : (FibHeap.FibTree a) | v == x
+                           &amp;&amp; size v == pow2 (rank v)
+                           &amp;&amp; 0 &lt; size v}</span><span class='hs-varid'>x</span></a><span class='hs-keyglyph'>]</span>
+<span class=hs-linenum> 91: </span>    <span class='hs-varid'>meld</span> <span class='hs-layout'>(</span><span class='hs-varid'>x'</span><span class='hs-conop'>:</span><span class='hs-varid'>xs</span><span class='hs-layout'>)</span> <span class='hs-varid'>x</span> <span class='hs-keyglyph'>=</span> <span class='hs-keyword'>if</span> <a class=annot href="#"><span class=annottext>{v : GHC.Types.Int | v == rank x
+                     &amp;&amp; v &gt;= 0}</span><span class='hs-varid'>rank</span></a> <a class=annot href="#"><span class=annottext>{v : (FibHeap.FibTree a) | v == x
+                           &amp;&amp; size v == pow2 (rank v)
+                           &amp;&amp; 0 &lt; size v}</span><span class='hs-varid'>x</span></a> <span class='hs-varop'>==</span> <a class=annot href="#"><span class=annottext>{v : GHC.Types.Int | v == rank x'
+                     &amp;&amp; v &gt;= 0}</span><span class='hs-varid'>rank</span></a> <a class=annot href="#"><span class=annottext>{v : (FibHeap.FibTree a) | v == x'
+                           &amp;&amp; size v == pow2 (rank v)
+                           &amp;&amp; 0 &lt; size v}</span><span class='hs-varid'>x'</span></a> <span class='hs-keyword'>then</span> <a class=annot href="#"><span class=annottext>forall a .
+(GHC.Classes.Ord&lt;[]&gt; a) =&gt;
+x2:[(FibHeap.FibTree a)] -&gt; (FibHeap.FibTree a) -&gt; {v : [(FibHeap.FibTree a)] | len v &gt; 0
+                                                                                &amp;&amp; len v &lt;= len x2 + 1}</span><span class='hs-varid'>meld</span></a> <a class=annot href="#"><span class=annottext>{v : [(FibHeap.FibTree a)] | v == xs
+                             &amp;&amp; len v &gt;= 0
+                             &amp;&amp; lsize v &gt;= len v}</span><span class='hs-varid'>xs</span></a> <a class=annot href="#"><span class=annottext>{v : (FibHeap.FibTree a) | (root v == root x
+                            &amp;&amp; root x &lt;= root x')
+                           || (root v == root x'
+                               &amp;&amp; root x' &lt;= root x)
+                           &amp;&amp; rank v == 1 + rank x}</span><span class='hs-layout'>(</span></a><span class='hs-varid'>link</span> <a class=annot href="#"><span class=annottext>{v : (FibHeap.FibTree a) | v == x
+                           &amp;&amp; size v == pow2 (rank v)
+                           &amp;&amp; 0 &lt; size v}</span><span class='hs-varid'>x</span></a> <a class=annot href="#"><span class=annottext>{v : (FibHeap.FibTree a) | v == x'
+                           &amp;&amp; size v == pow2 (rank v)
+                           &amp;&amp; 0 &lt; size v}</span><span class='hs-varid'>x'</span></a><span class='hs-layout'>)</span>
+<span class=hs-linenum> 92: </span>                     <span class='hs-keyword'>else</span> <a class=annot href="#"><span class=annottext>{v : (FibHeap.FibTree a) | v == x
+                           &amp;&amp; size v == pow2 (rank v)
+                           &amp;&amp; 0 &lt; size v}</span><span class='hs-varid'>x</span></a><span class='hs-conop'>:</span><a class=annot href="#"><span class=annottext>{v : (FibHeap.FibTree a) | v == x'
+                           &amp;&amp; size v == pow2 (rank v)
+                           &amp;&amp; 0 &lt; size v}</span><span class='hs-varid'>x'</span></a><span class='hs-conop'>:</span><a class=annot href="#"><span class=annottext>{v : [(FibHeap.FibTree a)] | v == xs
+                             &amp;&amp; len v &gt;= 0
+                             &amp;&amp; lsize v &gt;= len v}</span><span class='hs-varid'>xs</span></a>
+<span class=hs-linenum> 93: </span>
+<span class=hs-linenum> 94: </span><span class='hs-keyword'>{-@</span> <span class='hs-varid'>extractMin</span> <span class='hs-keyglyph'>::</span> <span class='hs-keyword'>{t:</span><span class='hs-keyglyph'>[</span><span class='hs-conid'>FibTree</span> <span class='hs-varid'>a</span><span class='hs-keyglyph'>]</span> <span class='hs-keyword'>| len t &gt; 0}</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-layout'>(</span><span class='hs-conid'>FibTree</span> <span class='hs-varid'>a</span><span class='hs-layout'>,</span> <span class='hs-keyglyph'>[</span><span class='hs-conid'>FibTree</span> <span class='hs-varid'>a</span><span class='hs-keyglyph'>]</span><span class='hs-layout'>)</span> <span class='hs-keyword'>@-}</span>
+<span class=hs-linenum> 95: </span><span class='hs-definition'>extractMin</span> <span class='hs-keyglyph'>::</span> <span class='hs-layout'>(</span><span class='hs-conid'>Ord</span> <span class='hs-varid'>a</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>=&gt;</span> <span class='hs-keyglyph'>[</span><span class='hs-conid'>FibTree</span> <span class='hs-varid'>a</span><span class='hs-keyglyph'>]</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-layout'>(</span><span class='hs-conid'>FibTree</span> <span class='hs-varid'>a</span><span class='hs-layout'>,</span> <span class='hs-keyglyph'>[</span><span class='hs-conid'>FibTree</span> <span class='hs-varid'>a</span><span class='hs-keyglyph'>]</span><span class='hs-layout'>)</span>
+<span class=hs-linenum> 96: </span><a class=annot href="#"><span class=annottext>forall a .
+(GHC.Classes.Ord&lt;[]&gt; a) =&gt;
+{t : [(FibHeap.FibTree a)] | len t &gt; 0} -&gt; ((FibHeap.FibTree a), [(FibHeap.FibTree a)])</span><span class='hs-definition'>extractMin</span></a> <span class='hs-keyglyph'>[</span><span class='hs-varid'>t</span><span class='hs-keyglyph'>]</span> <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>{v : [(FibHeap.FibTree a)] | v == []
+                             &amp;&amp; len v == 0
+                             &amp;&amp; lsize v == 0}</span><span class='hs-layout'>(</span></a><a class=annot href="#"><span class=annottext>{v : (FibHeap.FibTree a) | v == t
+                           &amp;&amp; size v == pow2 (rank v)
+                           &amp;&amp; 0 &lt; size v}</span><span class='hs-varid'>t</span></a><span class='hs-layout'>,</span> <a class=annot href="#"><span class=annottext>{VV : forall a &lt;p :: a a -&gt; Bool&gt;.
+      {v : [a]&lt;\x3 VV -&gt; {VV : a&lt;p x3&gt; | true}&gt; | v == []
+                                                  &amp;&amp; len v == 0
+                                                  &amp;&amp; lsize v == 0} | VV == []}</span><span class='hs-conid'>[]</span></a><span class='hs-layout'>)</span>
+<span class=hs-linenum> 97: </span><span class='hs-definition'>extractMin</span> <span class='hs-layout'>(</span><span class='hs-varid'>t</span><span class='hs-conop'>:</span><span class='hs-varid'>ts</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>=</span> 
+<span class=hs-linenum> 98: </span>    <span class='hs-keyword'>let</span> <span class='hs-layout'>(</span><a class=annot href="#"><span class=annottext>(FibHeap.FibTree a)</span><span class='hs-varid'>t'</span></a><span class='hs-layout'>,</span> <a class=annot href="#"><span class=annottext>[(FibHeap.FibTree a)]</span><span class='hs-varid'>ts'</span></a><span class='hs-layout'>)</span> <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>forall a .
+(GHC.Classes.Ord&lt;[]&gt; a) =&gt;
+{t : [(FibHeap.FibTree a)] | len t &gt; 0} -&gt; ((FibHeap.FibTree a), [(FibHeap.FibTree a)])</span><span class='hs-varid'>extractMin</span></a> <a class=annot href="#"><span class=annottext>{v : [(FibHeap.FibTree a)] | len v &gt;= 0
+                             &amp;&amp; lsize v &gt;= len v}</span><span class='hs-varid'>ts</span></a> <span class='hs-keyword'>in</span>
+<span class=hs-linenum> 99: </span>        <span class='hs-keyword'>if</span> <a class=annot href="#"><span class=annottext>{VV : a | VV == root t}</span><span class='hs-varid'>root</span></a> <a class=annot href="#"><span class=annottext>{v : (FibHeap.FibTree a) | v == t
+                           &amp;&amp; size v == pow2 (rank v)
+                           &amp;&amp; 0 &lt; size v}</span><span class='hs-varid'>t</span></a> <span class='hs-varop'>&lt;</span> <a class=annot href="#"><span class=annottext>{VV : a | VV == root t'}</span><span class='hs-varid'>root</span></a> <a class=annot href="#"><span class=annottext>{v : (FibHeap.FibTree a) | v == t'
+                           &amp;&amp; size v == pow2 (rank v)
+                           &amp;&amp; 0 &lt; size v}</span><span class='hs-varid'>t'</span></a> <span class='hs-keyword'>then</span> <a class=annot href="#"><span class=annottext>{VV : forall a b &lt;p2 :: a b -&gt; Bool&gt;.
+      x1:a -&gt; x2:{VV : b&lt;p2 x1&gt; | true} -&gt; {v : (a, b)&lt;\x5 VV -&gt; {VV : b&lt;p2 x5&gt; | true}&gt; | v == (,) x1 x2
+                                                                                           &amp;&amp; fst v == x1
+                                                                                           &amp;&amp; lqdc##$select v == x1
+                                                                                           &amp;&amp; lqdc##$select v == x2
+                                                                                           &amp;&amp; snd v == x2
+                                                                                           &amp;&amp; x_Tuple21 v == x1
+                                                                                           &amp;&amp; x_Tuple22 v == x2} | VV == (,)}</span><span class='hs-layout'>(</span></a><a class=annot href="#"><span class=annottext>{v : (FibHeap.FibTree a) | v == t
+                           &amp;&amp; size v == pow2 (rank v)
+                           &amp;&amp; 0 &lt; size v}</span><span class='hs-varid'>t</span></a><span class='hs-layout'>,</span> <a class=annot href="#"><span class=annottext>{v : [(FibHeap.FibTree a)] | len v &gt;= 0
+                             &amp;&amp; lsize v &gt;= len v}</span><span class='hs-varid'>ts</span></a><span class='hs-layout'>)</span> <span class='hs-keyword'>else</span> <a class=annot href="#"><span class=annottext>{VV : forall a b &lt;p2 :: a b -&gt; Bool&gt;.
+      x1:a -&gt; x2:{VV : b&lt;p2 x1&gt; | true} -&gt; {v : (a, b)&lt;\x5 VV -&gt; {VV : b&lt;p2 x5&gt; | true}&gt; | v == (,) x1 x2
+                                                                                           &amp;&amp; fst v == x1
+                                                                                           &amp;&amp; lqdc##$select v == x1
+                                                                                           &amp;&amp; lqdc##$select v == x2
+                                                                                           &amp;&amp; snd v == x2
+                                                                                           &amp;&amp; x_Tuple21 v == x1
+                                                                                           &amp;&amp; x_Tuple22 v == x2} | VV == (,)}</span><span class='hs-layout'>(</span></a><a class=annot href="#"><span class=annottext>{v : (FibHeap.FibTree a) | v == t'
+                           &amp;&amp; size v == pow2 (rank v)
+                           &amp;&amp; 0 &lt; size v}</span><span class='hs-varid'>t'</span></a><span class='hs-layout'>,</span> <a class=annot href="#"><span class=annottext>{v : (FibHeap.FibTree a) | v == t
+                           &amp;&amp; size v == pow2 (rank v)
+                           &amp;&amp; 0 &lt; size v}</span><span class='hs-varid'>t</span></a><span class='hs-conop'>:</span><a class=annot href="#"><span class=annottext>{v : [(FibHeap.FibTree a)] | v == ts'
+                             &amp;&amp; len v &gt;= 0
+                             &amp;&amp; lsize v &gt;= len v}</span><span class='hs-varid'>ts'</span></a><span class='hs-layout'>)</span>
+<span class=hs-linenum>100: </span>
+<span class=hs-linenum>101: </span><span class='hs-comment'>-- Problem with (sz-1) -&gt; need sz = rank minTr + ranksum trees -&gt; Problem with merge</span>
+<span class=hs-linenum>102: </span><span class='hs-keyword'>{-@</span> <span class='hs-varid'>deleteMin</span> <span class='hs-keyglyph'>::</span> <span class='hs-varid'>h</span><span class='hs-conop'>:</span><span class='hs-conid'>NEFibHeap</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-varid'>v</span><span class='hs-conop'>:</span> <span class='hs-conid'>FibHeap</span> <span class='hs-varid'>a</span> <span class='hs-keyword'>@-}</span>
+<span class=hs-linenum>103: </span><span class='hs-definition'>deleteMin</span> <span class='hs-keyglyph'>::</span> <span class='hs-layout'>(</span><span class='hs-conid'>Ord</span> <span class='hs-varid'>a</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>=&gt;</span> <span class='hs-conid'>FibHeap</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>FibHeap</span> <span class='hs-varid'>a</span>
+<span class=hs-linenum>104: </span><a class=annot href="#"><span class=annottext>forall a .
+(GHC.Classes.Ord&lt;[]&gt; a) =&gt;
+{VV : (FibHeap.FibHeap a) | notEmptyFibHeap VV} -&gt; (FibHeap.FibHeap a)</span><span class='hs-definition'>deleteMin</span></a> <span class='hs-layout'>(</span><span class='hs-conid'>FH</span> <span class='hs-layout'>(</span><span class='hs-conid'>Node</span> <span class='hs-keyword'>_</span> <span class='hs-varid'>x</span> <span class='hs-conid'>[]</span> <span class='hs-keyword'>_</span><span class='hs-layout'>)</span> <span class='hs-conid'>[]</span> <span class='hs-layout'>)</span> <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>{VV : forall a .
+      {v : (FibHeap.FibHeap a) | isEmptyFibHeap v
+                                 &amp;&amp; not (notEmptyFibHeap v)
+                                 &amp;&amp; v == E} | VV == E}</span><span class='hs-conid'>E</span></a>
+<span class=hs-linenum>105: </span><span class='hs-definition'>deleteMin</span> <span class='hs-varid'>h</span><span class='hs-keyglyph'>@</span><span class='hs-layout'>(</span><span class='hs-conid'>FH</span> <span class='hs-varid'>minTr</span> <span class='hs-varid'>ts</span><span class='hs-keyglyph'>@</span><span class='hs-layout'>(</span><span class='hs-varid'>x</span><span class='hs-conop'>:</span><span class='hs-varid'>xs</span><span class='hs-layout'>)</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>{VV : forall a .
+      x1:(FibHeap.FibTree a) -&gt; x2:[(FibHeap.FibTree a)] -&gt; {v : (FibHeap.FibHeap a) | notEmptyFibHeap v
+                                                                                       &amp;&amp; not (isEmptyFibHeap v)
+                                                                                       &amp;&amp; v == FH x1 x2
+                                                                                       &amp;&amp; fibsize v == size x1 + lsize x2
+                                                                                       &amp;&amp; minTree v == x1
+                                                                                       &amp;&amp; trees v == x2} | VV == FH}</span><span class='hs-conid'>FH</span></a> <a class=annot href="#"><span class=annottext>{v : (FibHeap.FibTree a) | v == minTr'
+                           &amp;&amp; size v == pow2 (rank v)
+                           &amp;&amp; 0 &lt; size v}</span><span class='hs-varid'>minTr'</span></a> <a class=annot href="#"><span class=annottext>{v : [(FibHeap.FibTree a)] | v == ts'
+                             &amp;&amp; len v &gt;= 0
+                             &amp;&amp; lsize v &gt;= len v}</span><span class='hs-varid'>ts'</span></a> <span class='hs-keyword'>where</span>
+<span class=hs-linenum>106: </span>    <span class='hs-layout'>(</span><a class=annot href="#"><span class=annottext>(FibHeap.FibTree a)</span><span class='hs-varid'>minTr'</span></a><span class='hs-layout'>,</span> <a class=annot href="#"><span class=annottext>[(FibHeap.FibTree a)]</span><span class='hs-varid'>ts'</span></a><span class='hs-layout'>)</span> <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>{v : [(FibHeap.FibTree a)] | len v &gt; 0} -&gt; ((FibHeap.FibTree a), [(FibHeap.FibTree a)])</span><span class='hs-varid'>extractMin</span></a> <span class='hs-varop'>$</span> <a class=annot href="#"><span class=annottext>{v : [(FibHeap.FibTree a)] | len v &gt; 0}</span><span class='hs-varid'>consolidate</span></a> <a class=annot href="#"><span class=annottext>[(FibHeap.FibTree a)]</span><span class='hs-layout'>(</span></a><a class=annot href="#"><span class=annottext>[(FibHeap.FibTree a)]</span><span class='hs-varid'>subtrees</span></a> <a class=annot href="#"><span class=annottext>{v : (FibHeap.FibTree a) | size v == pow2 (rank v)
+                           &amp;&amp; 0 &lt; size v}</span><span class='hs-varid'>minTr</span></a> <span class='hs-varop'>++</span> <a class=annot href="#"><span class=annottext>{v : [(FibHeap.FibTree a)] | len v &gt;= 0
+                             &amp;&amp; lsize v &gt;= len v}</span><span class='hs-varid'>ts</span></a><span class='hs-layout'>)</span>
+<span class=hs-linenum>107: </span><span class='hs-definition'>deleteMin</span> <span class='hs-varid'>h</span><span class='hs-keyglyph'>@</span><span class='hs-layout'>(</span><span class='hs-conid'>FH</span> <span class='hs-varid'>minTr</span><span class='hs-keyglyph'>@</span><span class='hs-layout'>(</span><span class='hs-conid'>Node</span> <span class='hs-keyword'>_</span> <span class='hs-keyword'>_</span> <span class='hs-varid'>subtr</span><span class='hs-keyglyph'>@</span><span class='hs-layout'>(</span><span class='hs-varid'>x</span><span class='hs-conop'>:</span><span class='hs-varid'>xs</span><span class='hs-layout'>)</span> <span class='hs-keyword'>_</span><span class='hs-layout'>)</span> <span class='hs-varid'>ts</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>{VV : forall a .
+      x1:(FibHeap.FibTree a) -&gt; x2:[(FibHeap.FibTree a)] -&gt; {v : (FibHeap.FibHeap a) | notEmptyFibHeap v
+                                                                                       &amp;&amp; not (isEmptyFibHeap v)
+                                                                                       &amp;&amp; v == FH x1 x2
+                                                                                       &amp;&amp; fibsize v == size x1 + lsize x2
+                                                                                       &amp;&amp; minTree v == x1
+                                                                                       &amp;&amp; trees v == x2} | VV == FH}</span><span class='hs-conid'>FH</span></a> <a class=annot href="#"><span class=annottext>{v : (FibHeap.FibTree a) | v == minTr'
+                           &amp;&amp; size v == pow2 (rank v)
+                           &amp;&amp; 0 &lt; size v}</span><span class='hs-varid'>minTr'</span></a> <a class=annot href="#"><span class=annottext>{v : [(FibHeap.FibTree a)] | v == ts'
+                             &amp;&amp; len v &gt;= 0
+                             &amp;&amp; lsize v &gt;= len v}</span><span class='hs-varid'>ts'</span></a> <span class='hs-keyword'>where</span>
+<span class=hs-linenum>108: </span>    <span class='hs-layout'>(</span><a class=annot href="#"><span class=annottext>(FibHeap.FibTree a)</span><span class='hs-varid'>minTr'</span></a><span class='hs-layout'>,</span> <a class=annot href="#"><span class=annottext>[(FibHeap.FibTree a)]</span><span class='hs-varid'>ts'</span></a><span class='hs-layout'>)</span> <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>{v : [(FibHeap.FibTree a)] | len v &gt; 0} -&gt; ((FibHeap.FibTree a), [(FibHeap.FibTree a)])</span><span class='hs-varid'>extractMin</span></a> <span class='hs-varop'>$</span> <a class=annot href="#"><span class=annottext>{v : [(FibHeap.FibTree a)] | len v &gt; 0}</span><span class='hs-varid'>consolidate</span></a> <a class=annot href="#"><span class=annottext>[(FibHeap.FibTree a)]</span><span class='hs-layout'>(</span></a><a class=annot href="#"><span class=annottext>{v : [(FibHeap.FibTree a)] | v == subtr
+                             &amp;&amp; v == : x xs
+                             &amp;&amp; head v == x
+                             &amp;&amp; len v == 1 + len xs
+                             &amp;&amp; lqdc##$select v == x
+                             &amp;&amp; lqdc##$select v == xs
+                             &amp;&amp; lsize v == size x + lsize xs
+                             &amp;&amp; tail v == xs
+                             &amp;&amp; len v &gt;= 0
+                             &amp;&amp; lsize v &gt;= len v}</span><span class='hs-varid'>subtr</span></a> <span class='hs-varop'>++</span> <a class=annot href="#"><span class=annottext>{v : [(FibHeap.FibTree a)] | len v &gt;= 0
+                             &amp;&amp; lsize v &gt;= len v}</span><span class='hs-varid'>ts</span></a><span class='hs-layout'>)</span>
+<span class=hs-linenum>109: </span>
+<span class=hs-linenum>110: </span><span class='hs-definition'>fromList</span> <span class='hs-keyglyph'>::</span> <span class='hs-layout'>(</span><span class='hs-conid'>Ord</span> <span class='hs-varid'>a</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>=&gt;</span> <span class='hs-keyglyph'>[</span><span class='hs-varid'>a</span><span class='hs-keyglyph'>]</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>FibHeap</span> <span class='hs-varid'>a</span>
+<span class=hs-linenum>111: </span><a class=annot href="#"><span class=annottext>forall a . (GHC.Classes.Ord&lt;[]&gt; a) =&gt; [a] -&gt; (FibHeap.FibHeap a)</span><span class='hs-definition'>fromList</span></a> <a class=annot href="#"><span class=annottext>[a]</span><span class='hs-varid'>xs</span></a> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>foldl</span> <a class=annot href="#"><span class=annottext>x1:(FibHeap.FibHeap a) -&gt; x2:a -&gt; {v : (FibHeap.FibHeap a) | notEmptyFibHeap v
+                                                             &amp;&amp; (root (minTree v) == root (minTree x1)
+                                                                 &amp;&amp; root (minTree x1) &lt;= x2)
+                                                                || ((x2 &lt;= root (minTree x1)
+                                                                     || not (notEmptyFibHeap x1))
+                                                                    &amp;&amp; root (minTree v) == x2)}</span><span class='hs-varid'>insert</span></a> <a class=annot href="#"><span class=annottext>{VV : forall a .
+      {v : (FibHeap.FibHeap a) | isEmptyFibHeap v
+                                 &amp;&amp; not (notEmptyFibHeap v)
+                                 &amp;&amp; v == E} | VV == E}</span><span class='hs-conid'>E</span></a> <a class=annot href="#"><span class=annottext>{v : [a] | v == xs
+           &amp;&amp; len v &gt;= 0
+           &amp;&amp; lsize v &gt;= len v}</span><span class='hs-varid'>xs</span></a>
+<span class=hs-linenum>112: </span>
+<span class=hs-linenum>113: </span><span class='hs-comment'>-- rank: binomial tree of rank r has 2^r nodes</span>
+<span class=hs-linenum>114: </span><span class='hs-comment'>-- size: number of nodes in fibheap</span>
+<span class=hs-linenum>115: </span><span class='hs-keyword'>{-@</span> <span class='hs-varid'>measure</span> <span class='hs-varid'>fibsize</span> <span class='hs-keyword'>@-}</span>
+<span class=hs-linenum>116: </span><span class='hs-keyword'>{-@</span> <span class='hs-varid'>fibsize</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>NEFibHeap</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Pos</span> <span class='hs-keyword'>@-}</span>
+<span class=hs-linenum>117: </span><span class='hs-definition'>fibsize</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>FibHeap</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Int</span>
+<span class=hs-linenum>118: </span><a class=annot href="#"><span class=annottext>forall a .
+x1:{VV : (FibHeap.FibHeap a) | notEmptyFibHeap VV} -&gt; {VV : GHC.Types.Int | VV == fibsize x1
+                                                                            &amp;&amp; 0 &lt; VV}</span><span class='hs-definition'>fibsize</span></a> <span class='hs-layout'>(</span><span class='hs-conid'>FH</span> <span class='hs-varid'>minTr</span> <span class='hs-varid'>ts</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>{v : GHC.Types.Int | v == pow2 (rank minTr)
+                     &amp;&amp; v == size minTr
+                     &amp;&amp; 0 &lt; v}</span><span class='hs-varid'>size</span></a> <a class=annot href="#"><span class=annottext>{v : (FibHeap.FibTree a) | v == minTr
+                           &amp;&amp; size v == pow2 (rank v)
+                           &amp;&amp; 0 &lt; size v}</span><span class='hs-varid'>minTr</span></a> <span class='hs-varop'>+</span> <a class=annot href="#"><span class=annottext>{v : GHC.Types.Int | v == lsize ts
+                     &amp;&amp; v &gt;= len ts}</span><span class='hs-varid'>lsize</span></a> <a class=annot href="#"><span class=annottext>{v : [(FibHeap.FibTree a)] | v == ts
+                             &amp;&amp; len v &gt;= 0
+                             &amp;&amp; lsize v &gt;= len v}</span><span class='hs-varid'>ts</span></a>
+<span class=hs-linenum>119: </span>
+<span class=hs-linenum>120: </span><span class='hs-keyword'>{-@</span> <span class='hs-varid'>measure</span> <span class='hs-varid'>lsize</span> <span class='hs-keyword'>@-}</span>
+<span class=hs-linenum>121: </span><span class='hs-keyword'>{-@</span> <span class='hs-varid'>lsize</span> <span class='hs-keyglyph'>::</span> <span class='hs-varid'>t</span><span class='hs-conop'>:</span><span class='hs-keyglyph'>[</span><span class='hs-conid'>FibTree</span> <span class='hs-varid'>a</span><span class='hs-keyglyph'>]</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-keyword'>{v:</span><span class='hs-conid'>Int</span> <span class='hs-keyword'>| v &gt;= len t}</span> <span class='hs-keyword'>@-}</span>
+<span class=hs-linenum>122: </span><span class='hs-definition'>lsize</span> <span class='hs-keyglyph'>::</span> <span class='hs-keyglyph'>[</span><span class='hs-conid'>FibTree</span> <span class='hs-varid'>a</span><span class='hs-keyglyph'>]</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Int</span>
+<span class=hs-linenum>123: </span><a class=annot href="#"><span class=annottext>forall a .
+x1:[(FibHeap.FibTree a)] -&gt; {VV : GHC.Types.Int | VV == lsize x1
+                                                  &amp;&amp; VV &gt;= len x1}</span><span class='hs-definition'>lsize</span></a> <span class='hs-conid'>[]</span> <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>{v : GHC.Prim.Int# | v == 0}</span><span class='hs-num'>0</span></a>
+<span class=hs-linenum>124: </span><span class='hs-definition'>lsize</span> <span class='hs-layout'>(</span><span class='hs-varid'>t</span><span class='hs-conop'>:</span><span class='hs-varid'>ts</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>{v : GHC.Types.Int | v == pow2 (rank t)
+                     &amp;&amp; v == size t
+                     &amp;&amp; 0 &lt; v}</span><span class='hs-varid'>size</span></a> <a class=annot href="#"><span class=annottext>{v : (FibHeap.FibTree a) | v == t
+                           &amp;&amp; size v == pow2 (rank v)
+                           &amp;&amp; 0 &lt; size v}</span><span class='hs-varid'>t</span></a> <span class='hs-varop'>+</span> <a class=annot href="#"><span class=annottext>{v : GHC.Types.Int | v == lsize ts
+                     &amp;&amp; v &gt;= len ts}</span><span class='hs-varid'>lsize</span></a> <a class=annot href="#"><span class=annottext>{v : [(FibHeap.FibTree a)] | v == ts
+                             &amp;&amp; len v &gt;= 0}</span><span class='hs-varid'>ts</span></a>
+<span class=hs-linenum>125: </span>
+<span class=hs-linenum>126: </span><span class='hs-keyword'>{-@</span> <span class='hs-varid'>reflect</span> <span class='hs-varid'>pow2</span> <span class='hs-keyword'>@-}</span>
+<span class=hs-linenum>127: </span><span class='hs-keyword'>{-@</span> <span class='hs-varid'>pow2</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Nat</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Pos</span> <span class='hs-keyword'>@-}</span>
+<span class=hs-linenum>128: </span><span class='hs-definition'>pow2</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Int</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Int</span>
+<span class=hs-linenum>129: </span><a class=annot href="#"><span class=annottext>{VV : GHC.Types.Int | VV &gt;= 0} -&gt; {VV : GHC.Types.Int | 0 &lt; VV}</span><span class='hs-definition'>pow2</span></a> <span class='hs-num'>0</span> <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>{v : GHC.Prim.Int# | v == 1}</span><span class='hs-num'>1</span></a>
+<span class=hs-linenum>130: </span><span class='hs-definition'>pow2</span> <span class='hs-varid'>n</span> <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>GHC.Types.Int</span><span class='hs-num'>2</span></a> <span class='hs-varop'>*</span> <a class=annot href="#"><span class=annottext>{VV : GHC.Types.Int | 0 &lt; VV}</span><span class='hs-varid'>pow2</span></a> <a class=annot href="#"><span class=annottext>GHC.Types.Int</span><span class='hs-layout'>(</span></a><a class=annot href="#"><span class=annottext>{v : GHC.Types.Int | v &gt;= 0}</span><span class='hs-varid'>n</span></a><span class='hs-comment'>-</span><a class=annot href="#"><span class=annottext>GHC.Types.Int</span><span class='hs-num'>1</span></a><span class='hs-layout'>)</span>
+<span class=hs-linenum>131: </span>
+<span class=hs-linenum>132: </span><span class='hs-keyword'>{-@</span> <span class='hs-varid'>measure</span> <span class='hs-varid'>size</span> <span class='hs-keyword'>@-}</span>
+<span class=hs-linenum>133: </span><span class='hs-keyword'>{-@</span> <span class='hs-varid'>size</span> <span class='hs-keyglyph'>::</span> <span class='hs-varid'>t</span><span class='hs-conop'>:</span><span class='hs-conid'>FibTree</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-keyword'>{v:</span><span class='hs-conid'>Pos</span><span class='hs-keyword'>| v == pow2 (rank t)}</span> <span class='hs-keyword'>@-}</span>
+<span class=hs-linenum>134: </span><span class='hs-definition'>size</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>FibTree</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Int</span>
+<span class=hs-linenum>135: </span><a class=annot href="#"><span class=annottext>forall a .
+x1:(FibHeap.FibTree a) -&gt; {VV : GHC.Types.Int | VV == pow2 (rank x1)
+                                                &amp;&amp; VV == size x1
+                                                &amp;&amp; 0 &lt; VV}</span><span class='hs-definition'>size</span></a> <span class='hs-layout'>(</span><span class='hs-conid'>Node</span> <span class='hs-varid'>r</span> <span class='hs-keyword'>_</span> <span class='hs-keyword'>_</span> <span class='hs-keyword'>_</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>=</span> <a class=annot href="#"><span class=annottext>x1:{v : GHC.Types.Int | v &gt;= 0} -&gt; {v : GHC.Types.Int | v == pow2 x1
+                                                        &amp;&amp; v == (if 0 == x1 then 1 else 2 * pow2 (x1 - 1))
+                                                        &amp;&amp; 0 &lt; v}</span><span class='hs-varid'>pow2</span></a> <a class=annot href="#"><span class=annottext>{v : GHC.Types.Int | v == r
+                     &amp;&amp; v &gt;= 0}</span><span class='hs-varid'>r</span></a>
+<span class=hs-linenum>136: </span>
+<span class=hs-linenum>137: </span><span class='hs-comment'>{-
+ decreaseKey and delete does not make sense to implement
+ in Haskell since there is no reference to an object. Hence
+ we cannot delete it in constant time which is the purpose of 
+ Fibonacci Heaps
+
+ left out following functionalities:
+    decreaseKey
+    delete
+-}</span></pre>
 </body>
 </html>
