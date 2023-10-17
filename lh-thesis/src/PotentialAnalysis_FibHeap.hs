@@ -362,7 +362,7 @@ markNod' t = cconst (assert (treeListSize (subtrees t) < treeSize t)) (if marked
 {-@ reflect contains @-}
 {-@ contains :: t:FibTree a -> FibTree a -> Bool / [treeSize t] @-}
 contains :: Ord a => FibTree a -> FibTree a -> Bool
-contains t t2 = cconst (assert (treeListSize (subtrees t) < treeSize t)) (root t == root t2 || containsL (subtrees t) t2)
+contains t t2 = root t == root t2 || containsL (subtrees t) t2
 
 {-@ reflect containsL @-}
 {-@ containsL :: ts:[FibTree a] -> FibTree a -> Bool / [treeListSize ts] @-}
@@ -408,12 +408,17 @@ getParentMaybe' _ [] _ = Nothing
 getParentMaybe' g [t] t2 
   | checkSubRoots2 (subtrees t) t2 
   = Just (propParentChildDepth g t ?? t)
-
 getParentMaybe' _ _ _ = undefined 
 {- 
-  | otherwise  
-  = cconst (assert (treeListSize (subtrees t) < treeSize t)) 
-           (getParentMaybe' t (subtrees t) t2 )
+  | subtrees g == [t]  
+  = assert (treeListSize (subtrees t) < treeSize t) ?? 
+    assert (contains t t2 ) ?? 
+    assert (0 < getDepth t t2) ?? 
+    (getParentMaybe' t (subtrees t) t2 ) 
+      -- ::  Maybe ({v:FibTree a | getDepth t v <= getDepth t t2 }) 
+      -- <:
+      -- Maybe ({v:FibTree a | getDepth g v <= getDepth g t2 }) 
+
 getParentMaybe' _ (t:ts) t2 
   = cconst (assert (0 < treeListSize ts && treeSize t < treeListSize (t:ts))) 
     (if contains t t2 then getParentMaybe t t2 else getParentMaybe' undefined ts t2)
