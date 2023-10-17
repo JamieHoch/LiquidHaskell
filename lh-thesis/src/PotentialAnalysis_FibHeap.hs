@@ -407,7 +407,7 @@ getParentMaybe' :: (Eq (FibTree a), Ord a) => FibTree a -> [FibTree a] -> FibTre
 getParentMaybe' _ [] _ = Nothing 
 getParentMaybe' g [t] t2 
   | checkSubRoots2 (subtrees t) t2 
-  = Just (prop1 g t ?? t)
+  = Just (propParentChildDepth g t ?? t)
 
 getParentMaybe' _ _ _ = undefined 
 {- 
@@ -427,10 +427,13 @@ getDepth t t2
   | root t == root t2 = 0
   | otherwise = 1 + getDepth' (subtrees t) t2
 
-{-@ prop1 :: t:FibTree a -> a:{FibTree a | singl a = subtrees t}
-      -> { getDepth t a  == 1 } @-}
-prop1 :: FibTree a -> FibTree a -> () 
-prop1 = undefined 
+{-@ propParentChildDepth :: t:FibTree a -> a:{FibTree a | singl a = subtrees t}
+      -> { getDepth t a  <= 1 } @-}
+propParentChildDepth :: Ord a => FibTree a -> FibTree a -> () 
+propParentChildDepth t a  
+  | root t == root a = ()
+  | otherwise 
+  = getDepth t a === 1 + getDepth' (subtrees t) a *** QED 
 
 
 
@@ -446,8 +449,16 @@ x ?? y = y
 {-@ getDepth' :: ts:[FibTree a] -> {t2:FibTree a | containsL ts t2} 
               -> {v:Nat | v >= 0 && getDepth' ts t2 >= getDepth' ts (head ts)} / [treeListSize ts] @-}
 getDepth' :: Ord a => [FibTree a] -> FibTree a -> Int
-getDepth' [t] t2 = cconst (assert (treeListSize (subtrees t) < treeSize t)) (if root t == root t2 then 0 else 1 + getDepth' (subtrees t) t2)
-getDepth' (t:ts) t2 = cconst (assert (0 < treeListSize ts && treeSize t < treeListSize (t:ts))) (if contains t t2 && root t == root t2 then 0 else if contains t t2 then 1 + getDepth' (subtrees t) t2 else getDepth' ts t2)
+getDepth' [t] t2 
+  | root t == root t2 = 0 
+  | otherwise = cconst (assert (treeListSize (subtrees t) < treeSize t)) 
+                (1 + getDepth' (subtrees t) t2)
+getDepth' (t:ts) t2 
+  | contains t t2 && root t == root t2 = 0 
+  | contains t t2 = cconst (assert (0 < treeListSize ts && treeSize t < treeListSize (t:ts))) 
+                     (1 + getDepth' (subtrees t) t2)
+  | otherwise = cconst (assert (0 < treeListSize ts && treeSize t < treeListSize (t:ts))) 
+                  (getDepth' ts t2)
 
 -- returns subtree with root k
 {-@ getTreeList ::  t:FibTree a -> a -> [FibTree a] / [treeSize t] @-}
