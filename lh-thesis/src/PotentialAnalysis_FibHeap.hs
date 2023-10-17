@@ -5,6 +5,7 @@
 {-@ LIQUID "--exact-data-con" @-}
 {-# LANGUAGE FlexibleContexts #-}
 --{-@ LIQUID "--no-termination" @-}
+{-@ infix : @-}
 
 module PotentialAnalysis_FibHeap where
 import Prelude hiding (pure, (++), (<*>), length)
@@ -308,7 +309,7 @@ assume :: Bool -> Bool
 assume x = undefined
 
 {-@ reflect assert @-}
-{-@ assert :: b:{Bool | b } -> Bool @-}
+{-@ assert :: b:{Bool | b } -> {v:Bool | b} @-}
 assert :: Bool -> Bool
 assert x = x
 
@@ -413,7 +414,7 @@ getParentMaybe t t2 | otherwise = cconst (assert (treeListSize (subtrees t) < tr
 
 
 {-@ reflect isPostFix @-}
-{-@ isPostFix :: xs:[a] -> ys:{[a] | len xs <= len ys} -> Bool / [len ys] @-}
+{-@ isPostFix :: xs:[a] -> ys:[a] -> Bool / [len ys] @-}
 isPostFix :: Eq a => [a] -> [a] -> Bool 
 isPostFix (x:xs) (y:ys)
   | x == y    = isPostFix xs ys
@@ -439,6 +440,23 @@ propPostFixId (x:xs) = propPostFixId xs
 propPostFixSub :: [a] -> [a] -> ()
 propPostFixSub = undefined
 
+
+checkProp' :: FibTree a -> FibTree a -> FibTree a -> ()
+{-@ checkProp' :: g:FibTree a -> t:{FibTree a |  isPostFix (singl t) (subtrees g) } -> v:FibTree a 
+              -> {getDepth t v  + 1 == getDepth g v }  @-}
+checkProp'  = undefined 
+
+
+
+checkProp :: FibTree a -> FibTree a -> FibTree a -> Maybe (FibTree a)  -> Maybe (FibTree a) 
+{-@ checkProp :: g:FibTree a -> t:{FibTree a |  isPostFix (singl t) (subtrees g) } -> t2:FibTree a 
+              -> m:Maybe ({v:FibTree a | getDepth t v <= getDepth t t2  }) 
+              -> {v:Maybe ({v:FibTree a | getDepth g v <= getDepth g t2 }) | v == m }  @-}
+checkProp _ _ _ Nothing = Nothing
+checkProp g t t2 (Just x) = checkProp' g t x ?? checkProp' g t t2  ?? Just x 
+
+
+
 {-@ getParentMaybe' :: g:FibTree a -> ts:{[FibTree a] | isPostFix ts (subtrees g)} 
                     -> t2:{FibTree a | contains g t2 && 0 < getDepth g t2} 
                     -> Maybe ({v:FibTree a | getDepth g v <= getDepth g t2 }) 
@@ -448,32 +466,34 @@ getParentMaybe' _ [] _ = Nothing
 getParentMaybe' g [t] t2 
   | checkSubRoots2 (subtrees t) t2 
   = Just (propParentChildDepth2 g t ?? t)
+  | root g == root t2 = Nothing -- TODO  check if this is correct
   | otherwise 
   = assert (treeListSize (subtrees t) < treeSize t) ?? 
     assert (contains g t2 ) ?? 
+    assume (contains t t2) ??
     assert (0 < getDepth g t2) ??
-    undefined
-{- 
-  = assert (treeListSize (subtrees t) < treeSize t) ?? 
-    assert (contains t t2 ) ?? 
-    assert (0 < getDepth t t2) ?? 
-    (getParentMaybe' t (subtrees t) t2 ) 
-      -- ::  Maybe ({v:FibTree a | getDepth t v <= getDepth t t2 }) 
-      -- <:
-      -- Maybe ({v:FibTree a | getDepth g v <= getDepth g t2 }) 
-getParentMaybe' _ _ _ = undefined 
-
-
+    assume (0 < getDepth t t2) ??
+    propPostFixId (subtrees t) ??
+    checkProp g t t2 
+      (getParentMaybe' t (subtrees t) t2 ) 
 getParentMaybe' g (t:ts) t2 
   | contains t t2
   = cconst (assert (0 < treeListSize ts && treeSize t < treeListSize (t:ts))) 
-     (getParentMaybe t t2)
+     (checkProp2 g t ts t2 (getParentMaybe t t2))
      -- ::  Maybe ({v:FibTree a | getDepth t v <= getDepth t t2 })
   | otherwise
-  = cconst (assert (0 < treeListSize ts && treeSize t < treeListSize (t:ts))) 
+  = cconst (assert (0 < treeListSize ts && treeSize t < treeListSize (t:ts))) ??
+    assume (isPostFix ts (subtrees g)) ?? 
     (getParentMaybe' g ts t2)
--}
-getParentMaybe' _ _ _ = undefined 
+
+
+checkProp2 :: FibTree a -> FibTree a -> [FibTree a] -> FibTree a -> Maybe (FibTree a)  -> Maybe (FibTree a) 
+{-@ checkProp2 :: g:FibTree a -> t:FibTree a -> ts:{[FibTree a] |  isPostFix (t:ts) (subtrees g) } -> t2:FibTree a 
+              -> m:Maybe ({v:FibTree a | getDepth t v <= getDepth t t2  }) 
+              -> {v:Maybe ({v:FibTree a | getDepth g v <= getDepth g t2 }) | v == m }  @-}
+checkProp2 = undefined  
+
+
 
 -- returns depth of root of t2 which is a subtree of t
 {-@ reflect getDepth @-}
