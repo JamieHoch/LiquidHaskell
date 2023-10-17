@@ -7,7 +7,7 @@
 --{-@ LIQUID "--no-termination" @-}
 
 module PotentialAnalysis_FibHeap where
-import Prelude hiding (pure, (++), (<*>))
+import Prelude hiding (pure, (++), (<*>), length)
 import Language.Haskell.Liquid.RTick as RTick
 import Language.Haskell.Liquid.ProofCombinators
 
@@ -27,12 +27,14 @@ data FibTree [rank] a =
     Node
         { rank :: Pos
         , root :: a
-        , subtrees :: {ts:[FibTree a] | True || condRank rank ts}
+        , subtrees :: {ts:[{ft:FibTree a | True}] | True || condRank rank ts}
         , marked :: Bool
         , treeSize :: {v:Pos | v = 1 + treeListSize subtrees && v > 0}
         , height :: Nat
         }
 @-}
+
+
 data FibTree a =
     Node
         { rank :: Int -- height of the tree
@@ -397,9 +399,35 @@ getParentMaybe :: (Eq (FibTree a), Ord a) => FibTree a -> FibTree a -> Maybe (Fi
 getParentMaybe t t2 | root t == root t2 = Nothing 
 getParentMaybe t t2 | checkSubRoots2 (subtrees t) t2 =  Just (cconst (assert (getDepth t t <= getDepth t t2)) t) 
 getParentMaybe t t2 | otherwise = cconst (assert (treeListSize (subtrees t) < treeSize t)) 
-                                         (getDepth t t2 ?? getParentMaybe' t (subtrees t) t2)
+                                          (getDepth t t2 ?? propPostFixId (subtrees t) ?? 
+                                           getParentMaybe' t (subtrees t) t2)
 
-{-@ getParentMaybe' :: t:FibTree a -> ts:{[FibTree a] | ts == subtrees t} 
+
+{-@ reflect isPostFix @-}
+{-@ isPostFix :: xs:[a] -> ys:{[a] | len xs <= len ys} -> Bool / [len ys] @-}
+isPostFix :: Eq a => [a] -> [a] -> Bool 
+isPostFix (x:xs) (y:ys)
+  | x == y    = isPostFix xs ys
+  | length xs >= length ys = False
+  | otherwise = isPostFix (x:xs) ys 
+isPostFix [] _ = True
+isPostFix _ [] = False   
+
+
+{-@ measure length @-}
+length :: [a] -> Int
+{-@ length :: xs:[a] -> {v:Nat | v = len xs} @-}
+length [] = 0 
+length (_:xs) = 1 + length xs 
+
+propPostFixId :: [a] -> ()
+{-@ propPostFixId :: x:[a] -> {isPostFix x x} @-}
+propPostFixId [] = () 
+propPostFixId (x:xs) = propPostFixId xs 
+
+
+
+{-@ getParentMaybe' :: t:FibTree a -> ts:{[FibTree a] | isPostFix ts (subtrees t)} 
                     -> t2:{FibTree a | contains t t2 && 0 < getDepth t t2} 
                     -> Maybe ({v:FibTree a | getDepth t v <= getDepth t t2 }) 
                     / [treeListSize ts] @-}
@@ -408,9 +436,9 @@ getParentMaybe' _ [] _ = Nothing
 getParentMaybe' g [t] t2 
   | checkSubRoots2 (subtrees t) t2 
   = Just (propParentChildDepth g t ?? t)
-getParentMaybe' _ _ _ = undefined 
+  | otherwise 
+  = undefined 
 {- 
-  | subtrees g == [t]  
   = assert (treeListSize (subtrees t) < treeSize t) ?? 
     assert (contains t t2 ) ?? 
     assert (0 < getDepth t t2) ?? 
@@ -418,11 +446,19 @@ getParentMaybe' _ _ _ = undefined
       -- ::  Maybe ({v:FibTree a | getDepth t v <= getDepth t t2 }) 
       -- <:
       -- Maybe ({v:FibTree a | getDepth g v <= getDepth g t2 }) 
-
-getParentMaybe' _ (t:ts) t2 
-  = cconst (assert (0 < treeListSize ts && treeSize t < treeListSize (t:ts))) 
-    (if contains t t2 then getParentMaybe t t2 else getParentMaybe' undefined ts t2)
+getParentMaybe' _ _ _ = undefined 
 -}
+
+getParentMaybe' g (t:ts) t2 
+  | contains t t2
+  = cconst (assert (0 < treeListSize ts && treeSize t < treeListSize (t:ts))) 
+     (getParentMaybe t t2)
+     -- ::  Maybe ({v:FibTree a | getDepth t v <= getDepth t t2 })
+  | otherwise
+  = cconst (assert (0 < treeListSize ts && treeSize t < treeListSize (t:ts))) 
+    (getParentMaybe' g ts t2)
+
+
 -- returns depth of root of t2 which is a subtree of t
 {-@ reflect getDepth @-}
 {-@ getDepth :: t:FibTree a -> {t2:FibTree a | contains t t2} 
@@ -432,7 +468,7 @@ getDepth t t2
   | root t == root t2 = 0
   | otherwise = 1 + getDepth' (subtrees t) t2
 
-{-@ propParentChildDepth :: t:FibTree a -> a:{FibTree a | singl a = subtrees t}
+{-@ propParentChildDepth :: t:FibTree a -> a:{FibTree a |  (singl a) == (subtrees t)}
       -> { getDepth t a  <= 1 } @-}
 propParentChildDepth :: Ord a => FibTree a -> FibTree a -> () 
 propParentChildDepth t a  
