@@ -435,17 +435,11 @@ propPostFixId :: [a] -> ()
 propPostFixId [] = () 
 propPostFixId (x:xs) = propPostFixId xs 
 
--- isPostFix (t:ts) g -> isPostFix ts g
-{-@ propPostFixSub :: ts:[a] -> g:{[a]| isPostFix ts g} -> {isPostFix ts g} @-}
-propPostFixSub :: [a] -> [a] -> ()
-propPostFixSub = undefined
-
 
 checkProp' :: FibTree a -> FibTree a -> FibTree a -> ()
 {-@ checkProp' :: g:FibTree a -> t:{FibTree a |  isPostFix (singl t) (subtrees g) } -> v:FibTree a 
               -> {getDepth t v  + 1 == getDepth g v }  @-}
 checkProp'  = undefined 
-
 
 
 checkProp :: FibTree a -> FibTree a -> FibTree a -> Maybe (FibTree a)  -> Maybe (FibTree a) 
@@ -466,7 +460,7 @@ getParentMaybe' _ [] _ = Nothing
 getParentMaybe' g [t] t2 
   | checkSubRoots2 (subtrees t) t2 
   = Just (propParentChildDepth2 g t ?? t)
-  | root g == root t2 = Nothing -- TODO  check if this is correct
+  | root g == root t2 = Nothing
   | otherwise 
   = assert (treeListSize (subtrees t) < treeSize t) ?? 
     assert (contains g t2 ) ?? 
@@ -515,7 +509,43 @@ propParentChildDepth t a
 {-@ propParentChildDepth2 :: t:FibTree a -> a:{FibTree a | isPostFix (singl a) (subtrees t)}
       -> { getDepth t a  <= 1 } @-}
 propParentChildDepth2 :: Ord a => FibTree a -> FibTree a -> () 
-propParentChildDepth2 = undefined
+propParentChildDepth2 t a
+  | root t == root a = ()
+  | otherwise 
+  = containsProp t a ?? getDepth t a 
+  === propPostFixDepth' (subtrees t) a ?? 1 + getDepth' (subtrees t) a *** QED 
+
+{-@ propPostFixDepth' :: ts:[FibTree a] -> {a:FibTree a | isPostFix (singl a) ts}
+      -> {getDepth' ts a == 0} @-}
+propPostFixDepth' :: Ord a => [FibTree a] -> FibTree a -> ()
+propPostFixDepth' [t] a
+  | root t == root a = ()
+  | otherwise = ()
+  *** QED
+propPostFixDepth' (t:ts) a
+  | root t == root a = ()
+  | contains t a = undefined -- TODO element must be unique
+  | otherwise = propPostFixDepth' ts a ?? ()
+
+{-@ containsProp :: t:FibTree a -> a:{FibTree a | isPostFix (singl a) (subtrees t)}
+      -> { contains t a} @-}
+containsProp :: Ord a => FibTree a -> FibTree a -> ()
+containsProp t a
+  | root a == root t = ()
+  | otherwise = containsLProp (subtrees t) a ?? ()
+
+{-@ containsLProp :: ts:[FibTree a] -> a:{FibTree a | isPostFix (singl a) ts}
+      -> {containsL ts a}@-}
+containsLProp :: Ord a => [FibTree a] -> FibTree a -> ()
+containsLProp [] _ = ()
+containsLProp [t] a
+  | root t == root a = ()
+  | otherwise = ()
+  *** QED
+containsLProp (t:ts) a
+  | root t == root a = ()
+  | otherwise = containsLProp ts a ?? ()
+
 
 {-@ reflect singl @-}
 singl :: a -> [a] 
