@@ -508,7 +508,7 @@ propParentChildDepth t a
 
 {-@ propParentChildDepth2 :: t:FibTree a -> a:{FibTree a | isPostFix (singl a) (subtrees t)}
       -> { getDepth t a  <= 1 } @-}
-propParentChildDepth2 :: Ord a => FibTree a -> FibTree a -> () 
+propParentChildDepth2 :: (Eq (FibTree a), Ord a) => FibTree a -> FibTree a -> () 
 propParentChildDepth2 t a
   | root t == root a = ()
   | otherwise 
@@ -517,15 +517,27 @@ propParentChildDepth2 t a
 
 {-@ propPostFixDepth' :: ts:[FibTree a] -> {a:FibTree a | isPostFix (singl a) ts}
       -> {getDepth' ts a == 0} @-}
-propPostFixDepth' :: Ord a => [FibTree a] -> FibTree a -> ()
+propPostFixDepth' :: (Eq (FibTree a), Ord a) => [FibTree a] -> FibTree a -> ()
 propPostFixDepth' [t] a
   | root t == root a = ()
   | otherwise = ()
   *** QED
 propPostFixDepth' (t:ts) a
   | root t == root a = ()
-  | contains t a = undefined -- TODO element must be unique
-  | otherwise = propPostFixDepth' ts a ?? ()
+  | containsL ts a = propPostFixDepth' ts a ?? ()
+  | otherwise = propPostFixRoot ts a ?? ()
+
+{-@ propPostFixRoot :: ts:[FibTree a] -> {a:FibTree a | isPostFix (singl a) ts} 
+      ->  {containsL ts a} @-}
+propPostFixRoot :: (Eq (FibTree a), Ord a) => [FibTree a] -> FibTree a -> ()
+propPostFixRoot [] _ = ()
+propPostFixRoot [t] a
+  | root t == root a = ()
+  | otherwise = ()
+  *** QED
+propPostFixRoot (t:ts) a
+  | root t == root a = ()
+  | otherwise = propPostFixRoot ts a ?? ()
 
 {-@ containsProp :: t:FibTree a -> a:{FibTree a | isPostFix (singl a) (subtrees t)}
       -> { contains t a} @-}
@@ -564,11 +576,11 @@ getDepth' [t] t2
   | otherwise = cconst (assert (treeListSize (subtrees t) < treeSize t)) 
                 (1 + getDepth' (subtrees t) t2)
 getDepth' (t:ts) t2 
-  | contains t t2 && root t == root t2 = 0 
-  | contains t t2 = cconst (assert (0 < treeListSize ts && treeSize t < treeListSize (t:ts))) 
-                     (1 + getDepth' (subtrees t) t2)
-  | otherwise = cconst (assert (0 < treeListSize ts && treeSize t < treeListSize (t:ts))) 
+  | root t == root t2 = 0
+  | containsL ts t2 = cconst (assert (0 < treeListSize ts && treeSize t < treeListSize (t:ts))) 
                   (getDepth' ts t2)
+  | otherwise = cconst (assert (0 < treeListSize ts && treeSize t < treeListSize (t:ts))) 
+                     (1 + getDepth' (subtrees t) t2)
 
 -- returns subtree with root k
 {-@ getTreeList ::  t:FibTree a -> a -> [FibTree a] / [treeSize t] @-}
