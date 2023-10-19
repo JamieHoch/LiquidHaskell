@@ -9,7 +9,7 @@ import Language.Haskell.Liquid.ProofCombinators
 import GHC.Base (undefined)
 
 {-@ measure length @-}
-{-@ length :: [a] -> Nat @-}
+{-@ length :: xs:[a] -> {v:Nat | v = len xs} @-}
 length :: [a] -> Int
 length [] = 0
 length (x : xs) = 1 + length xs
@@ -95,8 +95,8 @@ pot (x:xs) = 1 + (pot xs)
 
 -- potential of tuple
 {-@ measure pott @-}
-{-@ pott :: (BiTree a,[BiTree a]) -> Int @-}
-pott :: (BiTree a,[BiTree a]) -> Int
+{-@ pott :: (a,[a]) -> Int @-}
+pott :: (a,[a]) -> Int
 pott (x,xs) = pot xs + 1
 
 
@@ -152,20 +152,17 @@ mergeHeap [] ts2 = pure ts2
 mergeHeap ts1@(t1:ts1') ts2@(t2:ts2')
     | rank t1 < rank t2 = pure ((:) t1) </> mergeHeap ts1' ts2
     | rank t2 < rank t1 = pure ((:) t2) </> mergeHeap ts1 ts2'
-    | otherwise = abind (pot ts1  + pot ts2) 2 (pot ts1 + pot ts2 + 1) (pot ts1 + pot ts2) (mergeHeap ts1' ts2') (insTree (link t1 t2)) 
+    | otherwise         = abind 2 (length ts1 + length ts2) (mergeHeap ts1' ts2') (insTree (link t1 t2)) 
 
-
+-- THIS IS TRUSTED CODE ABOUT AMORTISED BIND 
 {-@ reflect abind @-}
-abind :: Int -> Int -> Int -> Int -> Tick a -> (a -> Tick c) -> Tick c
-{-@ abind :: n:Nat -> m:Nat -> a:Nat -> b:Nat -> x:Tick a -> f:(x:a -> {t:Tick c | True}) 
-                 -> {ti:Tick c | (tcost ti  <= n + m ) && tval (f (tval x)) == tval ti  } @-}
-abind _ _ _ _ (Tick c1 x) f = Tick 0 {- 1 + c1 + c2 -} y
-    where Tick c2 y = f x
+abind :: Int -> Int -> Tick [a] -> ([a] -> Tick [c]) -> Tick [c]
+{-@ abind :: c:Nat -> m:Nat -> x:Tick ({v:[a] | len v <= m - 1}) -> f:(fx:[a] -> {t:Tick {xs:[c] | len xs <= len fx + 1} | amortized t (pot (tval t)) (pot fx) <= c})
+                 -> {ti:Tick {xs:[c] | len xs <= m }  | (tcost ti == c + tcost x ) && tval (f (tval x)) == tval ti  } @-}
+abind c _ (Tick c1 x) f = Tick (c + c1) y
+    where Tick _ y = f x
+-- END TRUSTED 
 
-
--- We KNOW: tcost ti <= (1 + c1 + c2)
--- 1 + c1 + c2 <= n
--- WE WANT (tcost ti  <= n)
 
 {-@ reflect getRoot @-}
 getRoot :: Ord a => BiTree a -> a
@@ -177,16 +174,24 @@ first (x,xs) = x
 
 {-@ reflect removeMinTree @-}
 {-@ removeMinTree :: Ord a => ts:NEHeap a
-        -> {ti:Tick {v:(BiTree a, [BiTree a]) | pott v == pot ts} | tcost ti + pott (tval ti) - pot ts <= pot ts && tcost ti <= pot ts} @-}
+        -> {ti:Tick {v:(BiTree a, {xsss:[BiTree a] | True }) | pott v == pot ts} | tcost ti + pott (tval ti) - pot ts <= pot ts && tcost ti <= pot ts} @-}
 removeMinTree :: Ord a => Heap a -> Tick (BiTree a, [BiTree a])
 removeMinTree [t] = pure (t,[])
 removeMinTree (t:ts)
-    | root t < root t' = Tick (1 + tcost f) (t, ts)
-    | otherwise = Tick (1 + tcost f) (t', t:ts')
+    | root t < root t' = Tick (cc + 1) (t,ts)
+    | otherwise        = Tick (cc + 1) (t',t:ts')
+    -- | otherwise = pure (addSnd t) </> removeMinTree ts -- (t', t:ts')
     where 
-        (t', ts') = tval f
-        f = removeMinTree ts
+      g (t', ts') = (t', t:ts')
+      (t', ts') = tval rem
+      rem@(Tick cc _) = removeMinTree ts
 -- TODO rewrite without tval/tcost --> access to subformulas
+
+
+{-@ reflect addSnd @-}
+{-@ addSnd :: a -> xs:(a, [a]) -> {v:(a, [a]) | pott v = pott xs + 1 } @-}
+addSnd ::  a -> (a, [a]) ->(a, [a])
+addSnd y (x,ys) = (x, y:ys)
 
 {-@ reflect findMin @-}
 {-@ findMin :: Ord a => h:NEHeap a 
@@ -204,10 +209,12 @@ deleteMin ts = let (Node _ x ts1 _, ts2) = tval (removeMinTree ts) in
 
 {-@ reflect deleteMin' @-}
 {-@ deleteMin' :: Ord a => ts1:[BiTree a] -> ts2:[BiTree a] 
-        -> {h:NEHeap a | pot h == pot ts2 + 1} -> {ti:Tick ({v: Heap a | pot v <= pot ts1 + pot ts2}) | amortized ti (pot (tval (deleteMin' ts1 ts2 h))) (pot h) <= 2 * (pot ts1 + pot ts2)} @-}
+        -> {h:NEHeap a | pot h == pot ts2 + 1 && len h == len ts2 + 1 } 
+        -> {ti:Tick ({v: Heap a | pot v <= pot ts1 + pot ts2 && len v <= len ts1 + len ts2 }) | amortized ti (pot (tval (deleteMin' ts1 ts2 h))) (pot h) <= 2 * (pot ts1 + pot ts2)} @-}
 deleteMin' :: Ord a => [BiTree a] -> [BiTree a] -> Heap a -> Tick (Heap a)
 deleteMin' ts1 ts2 h = RTick.step (tcost (removeMinTree h)) (mergeHeap (myreverse ts1) ts2)
 -}
+
 
 {-@ reflect myreverse @-}
 {-@ myreverse :: xs:[a] -> {ys:[a] | len xs == len ys } @-}
