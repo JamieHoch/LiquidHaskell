@@ -270,9 +270,11 @@ here delete is a tricky function because we do not have direct access via pointe
 we also ran into some termination issues that can be solved with help of cconst and assertions
 -}
 
+{-
 {-@ assume :: b:Bool -> {v:Bool | b } @-}
 assume :: Bool -> Bool
 assume x = undefined
+-}
 
 {-@ reflect assert @-}
 {-@ assert :: b:{Bool | b } -> {v:Bool | b} @-}
@@ -413,20 +415,31 @@ propPostFixId [] = ()
 propPostFixId (x:xs) = propPostFixId xs
 
 
-checkProp' :: FibTree a -> FibTree a -> FibTree a -> ()
-{-@ checkProp' :: g:FibTree a -> t:{FibTree a |  isPostFix (singl t) (subtrees g) } -> v:FibTree a 
-              -> {getDepth t v  + 1 == getDepth g v }  @-}
-checkProp'  = undefined
+checkProp' :: Ord a => FibTree a -> FibTree a -> FibTree a -> ()
+{-@ checkProp' :: g:FibTree a -> t:{FibTree a |  isPostFix (singl t) (subtrees g) } -> t2:FibTree a 
+              -> {getDepth t t2  + 1 == getDepth g t2 }  @-}
+checkProp' g t t2
+  | root g == root t2 = undefined
+  | otherwise = undefined
 
 
-checkProp :: FibTree a -> FibTree a -> FibTree a -> Maybe (FibTree a)  -> Maybe (FibTree a)
+checkProp :: Ord a => FibTree a -> FibTree a -> FibTree a -> Maybe (FibTree a)  -> Maybe (FibTree a)
 {-@ checkProp :: g:FibTree a -> t:{FibTree a |  isPostFix (singl t) (subtrees g) } -> t2:FibTree a 
               -> m:Maybe ({v:FibTree a | getDepth t v <= getDepth t t2  }) 
               -> {v:Maybe ({v:FibTree a | getDepth g v <= getDepth g t2 }) | v == m }  @-}
 checkProp _ _ _ Nothing = Nothing
 checkProp g t t2 (Just x) = checkProp' g t x ?? checkProp' g t t2  ?? Just x
 
+{-@ containsProp2 :: g:FibTree a -> {t:FibTree a | isPostFix (singl t) (subtrees g)} 
+          -> {t2:FibTree a | contains g t2} -> {contains t t2}
+@-}
+containsProp2 :: FibTree a -> FibTree a -> FibTree a -> ()
+containsProp2 = undefined
 
+{-@ depthProp2 :: g:FibTree a -> {t:FibTree a | root g /= root t && isPostFix (singl t) (subtrees g)}
+          -> {t2:FibTree a | 0 < getDepth g t2} -> {0 < getDepth t t2} @-}
+depthProp2 :: FibTree a -> FibTree a -> FibTree a -> ()
+depthProp2 = undefined
 
 {-@ getParentMaybe' :: g:FibTree a -> ts:{[FibTree a] | isPostFix ts (subtrees g)} 
                     -> t2:{FibTree a | contains g t2 && 0 < getDepth g t2} 
@@ -435,19 +448,21 @@ checkProp g t t2 (Just x) = checkProp' g t x ?? checkProp' g t t2  ?? Just x
 getParentMaybe' :: (Eq (FibTree a), Ord a) => FibTree a -> [FibTree a] -> FibTree a -> Maybe (FibTree a)
 getParentMaybe' _ [] _ = Nothing
 getParentMaybe' g [t] t2
+  | root g == root t = Nothing
   | checkSubRoots2 (subtrees t) t2
   = Just (propParentChildDepth2 g t ?? t)
   | root g == root t2 = Nothing
   | otherwise
   = assert (treeListSize (subtrees t) < treeSize t) ??
-    assert (contains g t2 ) ??
-    assume (contains t t2) ??
-    assert (0 < getDepth g t2) ??
-    assume (0 < getDepth t t2) ??
+    containsProp2 g t t2 ??
+    assert (contains t t2) ??
+    depthProp2 g t t2 ??
+    assert (0 < getDepth t t2) ??
     propPostFixId (subtrees t) ??
     checkProp g t t2
       (getParentMaybe' t (subtrees t) t2 )
 getParentMaybe' g (t:ts) t2
+  | root g == root t = Nothing
   | contains t t2 =
     (0 < treeListSize ts) ??
     (treeSize t < treeListSize (t:ts)) ??
@@ -456,8 +471,15 @@ getParentMaybe' g (t:ts) t2
   | otherwise =
     (0 < treeListSize ts) ??
     (treeSize t < treeListSize (t:ts)) ??
-    assume (isPostFix ts (subtrees g)) ??
+    postFixProp t ts (subtrees g) ??
+    assert (isPostFix ts (subtrees g)) ??
     (getParentMaybe' g ts t2)
+
+{-@ postFixProp :: t:FibTree a -> ts:[FibTree a] 
+        -> {gs:[FibTree a] | isPostFix (t:ts) gs}
+        -> {isPostFix ts gs} @-}
+postFixProp :: FibTree a -> [FibTree a] -> [FibTree a] -> ()
+postFixProp = undefined
 
 
 checkProp2 :: FibTree a -> FibTree a -> [FibTree a] -> FibTree a -> Maybe (FibTree a)  -> Maybe (FibTree a)
