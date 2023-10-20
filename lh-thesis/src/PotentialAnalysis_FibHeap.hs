@@ -332,18 +332,18 @@ markNod' t
 -- checks if tree t contain element k
 {-@ reflect contains @-}
 {-@ contains :: t:FibTree a -> FibTree a -> Bool / [treeSize t] @-}
-contains :: Ord a => FibTree a -> FibTree a -> Bool
-contains t t2 = root t == root t2 || containsL (subtrees t) t2
+contains :: (Eq (FibTree a), Ord a) => FibTree a -> FibTree a -> Bool
+contains t t2 = t == t2 || containsL (subtrees t) t2
 
 {-@ reflect containsL @-}
 {-@ containsL :: ts:[FibTree a] -> FibTree a -> Bool / [treeListSize ts] @-}
-containsL :: Ord a =>  [FibTree a] -> FibTree a -> Bool
+containsL :: (Eq (FibTree a), Ord a) =>  [FibTree a] -> FibTree a -> Bool
 containsL [] _ = False
 containsL [t] t2 = (treeListSize (subtrees t) < treeSize t) ?? (root t == root t2 || containsL (subtrees t) t2)
 containsL (t:ts) t2 =
   (0 < treeListSize ts) ??
   (treeSize t < treeListSize (t:ts)) ??
-  (root t == root t2 || containsL (subtrees t) t2) || containsL ts t2
+  (t == t2 || containsL (subtrees t) t2) || containsL ts t2
 
 {-@ test :: {t:FibTree a | not (subtrees t == [])} -> Bool @-}
 test :: Ord a => FibTree a -> Bool
@@ -351,15 +351,15 @@ test t = True
 
 -- checks if one of the subtrees of ts contains t2 in the root
 {-@ reflect checkSubRoots2 @-}
-checkSubRoots2 :: Ord a =>  [FibTree a] -> FibTree a -> Bool
+checkSubRoots2 :: (Eq (FibTree a), Ord a) =>  [FibTree a] -> FibTree a -> Bool
 checkSubRoots2 [] _ = False
-checkSubRoots2 (t:ts) t2 = root t == root t2 || checkSubRoots2 ts t2
+checkSubRoots2 (t:ts) t2 = t == t2 || checkSubRoots2 ts t2
 
 -- returns parent tree of k
 {-@ getParent :: t:FibTree a -> {t2:FibTree a | contains t t2} -> {vs:[FibTree a] | len vs <= 1} / [treeSize t] @-}
 getParent ::(Eq (FibTree a), Ord a) => FibTree a -> FibTree a -> [FibTree a]
 getParent t t2
-  | root t == root t2 = []
+  | t == t2 = []
   | checkSubRoots2 (subtrees t) t2 = [t]
   | otherwise =
     (treeListSize (subtrees t) < treeSize t) ??
@@ -415,15 +415,16 @@ propPostFixId [] = ()
 propPostFixId (x:xs) = propPostFixId xs
 
 
-checkProp' :: Ord a => FibTree a -> FibTree a -> FibTree a -> ()
-{-@ checkProp' :: g:FibTree a -> t:{FibTree a |  isPostFix (singl t) (subtrees g) } -> t2:FibTree a 
-              -> {getDepth t t2  + 1 == getDepth g t2 }  @-}
+checkProp' :: (Eq (FibTree a), Ord a) => FibTree a -> FibTree a -> FibTree a -> ()
+{-@ checkProp' :: g:FibTree a -> t:{FibTree a | isPostFix (singl t) (subtrees g) } -> t2:FibTree a 
+              -> {getDepth t t2 == getDepth g t2 + 1 }  @-}
 checkProp' g t t2
-  | root g == root t2 = undefined
+  | g == t2 = undefined
+   -- getDepth g t2 + 1 === 1 === 1 + getDepth' (subtrees g) t ? propPostFixDepth' (subtrees g) t === getDepth t t2 ***QED
   | otherwise = undefined
 
 
-checkProp :: Ord a => FibTree a -> FibTree a -> FibTree a -> Maybe (FibTree a)  -> Maybe (FibTree a)
+checkProp :: (Eq (FibTree a), Ord a) => FibTree a -> FibTree a -> FibTree a -> Maybe (FibTree a)  -> Maybe (FibTree a)
 {-@ checkProp :: g:FibTree a -> t:{FibTree a |  isPostFix (singl t) (subtrees g) } -> t2:FibTree a 
               -> m:Maybe ({v:FibTree a | getDepth t v <= getDepth t t2  }) 
               -> {v:Maybe ({v:FibTree a | getDepth g v <= getDepth g t2 }) | v == m }  @-}
@@ -436,7 +437,7 @@ checkProp g t t2 (Just x) = checkProp' g t x ?? checkProp' g t t2  ?? Just x
 containsProp2 :: FibTree a -> FibTree a -> FibTree a -> ()
 containsProp2 = undefined
 
-{-@ depthProp2 :: g:FibTree a -> {t:FibTree a | root g /= root t && isPostFix (singl t) (subtrees g)}
+{-@ depthProp2 :: g:FibTree a -> {t:FibTree a | g /= t && isPostFix (singl t) (subtrees g)}
           -> {t2:FibTree a | 0 < getDepth g t2} -> {0 < getDepth t t2} @-}
 depthProp2 :: FibTree a -> FibTree a -> FibTree a -> ()
 depthProp2 = undefined
@@ -448,10 +449,10 @@ depthProp2 = undefined
 getParentMaybe' :: (Eq (FibTree a), Ord a) => FibTree a -> [FibTree a] -> FibTree a -> Maybe (FibTree a)
 getParentMaybe' _ [] _ = Nothing
 getParentMaybe' g [t] t2
-  | root g == root t = Nothing
+  | g == t = Nothing
   | checkSubRoots2 (subtrees t) t2
   = Just (propParentChildDepth2 g t ?? t)
-  | root g == root t2 = Nothing
+  | g == t2 = Nothing
   | otherwise
   = assert (treeListSize (subtrees t) < treeSize t) ??
     containsProp2 g t t2 ??
@@ -462,7 +463,7 @@ getParentMaybe' g [t] t2
     checkProp g t t2
       (getParentMaybe' t (subtrees t) t2 )
 getParentMaybe' g (t:ts) t2
-  | root g == root t = Nothing
+  | g == t = Nothing
   | contains t t2 =
     (0 < treeListSize ts) ??
     (treeSize t < treeListSize (t:ts)) ??
@@ -505,17 +506,17 @@ checkProp2 = undefined
 -- returns depth of root of t2 which is a subtree of t
 {-@ reflect getDepth @-}
 {-@ getDepth :: t:FibTree a -> {t2:FibTree a | contains t t2} 
-             -> {v:Nat | (v = 0 <=> root t == root t2) &&  getDepth t t2 >= getDepth t t} / [treeSize t] @-}
-getDepth :: Ord a => FibTree a -> FibTree a -> Int
+             -> {v:Nat | (v = 0 <=> t == t2) &&  getDepth t t2 >= getDepth t t} / [treeSize t] @-}
+getDepth :: (Eq (FibTree a), Ord a) => FibTree a -> FibTree a -> Int
 getDepth t t2
-  | root t == root t2 = 0
+  | t == t2 = 0
   | otherwise = 1 + getDepth' (subtrees t) t2
 
 {-@ propParentChildDepth :: t:FibTree a -> a:{FibTree a |  (singl a) == (subtrees t)}
       -> { getDepth t a  <= 1 } @-}
-propParentChildDepth :: Ord a => FibTree a -> FibTree a -> ()
+propParentChildDepth :: (Eq (FibTree a), Ord a) => FibTree a -> FibTree a -> ()
 propParentChildDepth t a
-  | root t == root a = ()
+  | t == a = ()
   | otherwise
   = getDepth t a === 1 + getDepth' (subtrees t) a *** QED
 
@@ -523,7 +524,7 @@ propParentChildDepth t a
       -> { getDepth t a  <= 1 } @-}
 propParentChildDepth2 :: (Eq (FibTree a), Ord a) => FibTree a -> FibTree a -> ()
 propParentChildDepth2 t a
-  | root t == root a = ()
+  | t == a = ()
   | otherwise
   = containsProp t a ?? getDepth t a
   === propPostFixDepth' (subtrees t) a ?? 1 + getDepth' (subtrees t) a *** QED
@@ -545,30 +546,30 @@ propPostFixDepth' (t:ts) a
 propPostFixRoot :: (Eq (FibTree a), Ord a) => [FibTree a] -> FibTree a -> ()
 propPostFixRoot [] _ = ()
 propPostFixRoot [t] a
-  | root t == root a = ()
+  | t == a = ()
   | otherwise = ()
   *** QED
 propPostFixRoot (t:ts) a
-  | root t == root a = ()
+  | t == a = ()
   | otherwise = propPostFixRoot ts a ?? ()
 
 {-@ containsProp :: t:FibTree a -> a:{FibTree a | isPostFix (singl a) (subtrees t)}
       -> { contains t a} @-}
-containsProp :: Ord a => FibTree a -> FibTree a -> ()
+containsProp :: (Eq (FibTree a), Ord a) => FibTree a -> FibTree a -> ()
 containsProp t a
-  | root a == root t = ()
+  | a == t = ()
   | otherwise = containsLProp (subtrees t) a ?? ()
 
 {-@ containsLProp :: ts:[FibTree a] -> a:{FibTree a | isPostFix (singl a) ts}
       -> {containsL ts a}@-}
-containsLProp :: Ord a => [FibTree a] -> FibTree a -> ()
+containsLProp :: (Eq (FibTree a), Ord a) => [FibTree a] -> FibTree a -> ()
 containsLProp [] _ = ()
 containsLProp [t] a
-  | root t == root a = ()
+  | t == a = ()
   | otherwise = ()
   *** QED
 containsLProp (t:ts) a
-  | root t == root a = ()
+  | t == a = ()
   | otherwise = containsLProp ts a ?? ()
 
 
@@ -584,7 +585,7 @@ x ?? y = y
 {-@ reflect getDepth' @-}
 {-@ getDepth' :: ts:[FibTree a] -> {t2:FibTree a | containsL ts t2} 
               -> {v:Nat | v >= 0 && getDepth' ts t2 >= getDepth' ts (head ts)} / [treeListSize ts] @-}
-getDepth' :: Ord a => [FibTree a] -> FibTree a -> Int
+getDepth' :: (Eq (FibTree a), Ord a) => [FibTree a] -> FibTree a -> Int
 getDepth' [t] t2
   | root t == root t2 = 0
   | otherwise = (treeListSize (subtrees t) < treeSize t) ??
