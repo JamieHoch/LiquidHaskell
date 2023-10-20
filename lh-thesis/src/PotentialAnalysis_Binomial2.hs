@@ -111,7 +111,6 @@ pot []     = 0
 pot (x:xs) = 1 + (pot xs)
 
 {-@ invariant {xs:[a] | pot xs == len xs } @-}
-invariant = ()
 
 -- potential of tuple
 {-@ measure pott @-}
@@ -208,20 +207,43 @@ removeMinTree h@(t:ts)
       (Tick cc (t', ts')) = removeMinTree ts
 -- TODO rewrite without tval/tcost --> access to subformulas
 
--- pott (tval ti) <= pot ts
--- tcost ti + pott (tval ti) - pot ts <= pot ts &&
-{-@ reflect addSnd @-}
-{-@ addSnd :: h:NEHeap a -> BiTree a -> {xs:(BiTree a, [BiTree a]) | pott xs = pot h - 1 } -> {v:(BiTree a, [BiTree a]) | pott v == pot h} @-}
-addSnd :: Heap a -> BiTree a -> (BiTree a, [BiTree a]) ->(BiTree a, [BiTree a])
-addSnd _ y (x,ys) = (x, y:ys)
 
-{-
-{-@ reflect addSnd @-}
-{-@ addSnd :: ts:[BiTree a] -> t:BiTree a -> {xs:(BiTree a, [BiTree a]) | pott xs == pot (t:ts) - 1} 
-        -> {ti:Tick {v:(BiTree a, [BiTree a]) | pott v == pot (t:ts)} | tcost ti = 0} @-}
-addSnd :: [BiTree a] -> BiTree a -> (BiTree a, [BiTree a]) -> Tick (BiTree a, [BiTree a])
-addSnd _ y (x,ys) = pure (x, y:ys)
--}
+
+{-@ removeMinTree' :: Ord a => ts:NEHeap a
+        -> {ti:Tick {v:(BiTree a, [BiTree a]) | pott v == pot ts} |  pott (tval ti) == pot ts && tcost ti <= pot ts && tcost ti + pott (tval ti) - pot ts <= pot ts} @-}
+removeMinTree' :: Ord a => Heap a -> Tick (BiTree a, [BiTree a])
+removeMinTree' [t]    = pure (t,[])
+removeMinTree' (t:ts) = boo (t:ts) (ifTick 0 (removeMinTree' ts) (\(t', ts') -> (root t < root t')) (\(t', ts') -> pure (t,ts)) (\(t', ts') -> pure (t',t:ts')))
+
+
+{-@ reflect propPott @-}
+{-@ propPott :: ts:Int-> i:{v:(BiTree a, [BiTree a]) | pott v == ts } -> {v:Bool | v <=> (pott i == ts) } @-}
+propPott :: Int -> (BiTree a, [BiTree a]) -> Bool
+propPott ts v = pott v == ts
+
+
+
+{-@ valueTickPushProp :: p:(a -> Bool) -> ti:(Tick {v:a | p v})
+        -> {to:Tick {v:a | p v}  | to == ti && p (tval to) && tcost to == tcost ti && tval to == tval ti} @-}
+valueTickPushProp :: (a -> Bool) -> Tick a -> Tick a
+valueTickPushProp _ (Tick c v) = Tick c v  
+
+
+
+{-@ boo :: ts:NEHeap a -> ti:Tick {v:(BiTree a, [BiTree a]) | pott v == pot ts} 
+        -> {to:Tick {v:(BiTree a, [BiTree a]) | pott v == pot ts}  | to == ti && pott (tval to) == pot ts && tcost to == tcost ti && tval to == tval ti} @-}
+boo :: Heap a -> Tick (BiTree a, [BiTree a]) -> Tick (BiTree a, [BiTree a])
+boo _ (Tick c v) = Tick c v  
+
+
+-- THIS TOO IS TRUSTED LIBRARY CODE 
+-- NV: Here the +1 comes because I tick! 
+{-@ reflect ifTick @-}
+{-@ ifTick :: c:Nat -> t:Tick a -> (a -> Bool) -> tb:(a -> {ti:Tick b | tcost ti <= c}) -> fb:(a -> {ti:Tick b | tcost ti <= c}) 
+           -> {to:Tick b | (tcost to <= tcost t + c + 1) && (tval to == tval (tb (tval t)) || tval to == tval (fb (tval t))) } @-}
+ifTick :: Int -> Tick a -> (a -> Bool) -> (a -> Tick b) -> (a -> Tick b) -> Tick b
+ifTick _ (Tick c v) b t e = RTick.step (c + 1) (if b v then t v else e v)  
+-- END OF TRUSTED CODE 
 
 {-@ reflect findMin @-}
 {-@ findMin :: Ord a => h:NEHeap a 
