@@ -51,6 +51,14 @@ link t1@(Node r1 x1 ts1 sz1) t2@(Node _ x2 ts2 sz2)
     | otherwise = Node (r1 + 1) x2 (t1:ts2) (sz1 + sz2)
 
 type Heap a = [BiTree a]
+{-
+data Heap a =
+    Heap {
+        list :: [BiTree]
+        numNodes :: {v:Int | v + 1 == powerOfTwo (len list)}
+    }
+-- because otherwise 
+-}
 
 {-@ reflect log2 @-}
 {-@ log2 :: n:Pos -> v:Nat / [n]@-}
@@ -80,7 +88,9 @@ logPot ts = log2 (numNodes ts)
 prop :: Heap a -> ()
 prop [] = numNodes [] + 1 
     === powerOfTwo 0 ***QED
-prop _ = undefined
+prop [t] = undefined -- numNodes [t] + 1 === treeSize t + 1 === 1 + treeListSize subtrees
+prop ts = undefined
+-- not possible to prove that because no knowledge about tree t
 
 
 -- potential as len of list
@@ -91,11 +101,12 @@ pot :: [a] -> Int
 pot []     = 0
 pot (x:xs) = 1 + (pot xs)
 
-{-@ invariant {xs:[a] |  pot xs == len xs }@-}
+{-@ invariant {xs:[a] | pot xs == len xs } @-}
+invariant = ()
 
 -- potential of tuple
 {-@ measure pott @-}
-{-@ pott :: (a,[a]) -> Int @-}
+{-@ pott :: x:(a,[a]) -> {v:Int | v == (pot (snd x)) + 1} @-}
 pott :: (a,[a]) -> Int
 pott (x,xs) = pot xs + 1
 
@@ -145,7 +156,10 @@ amortized cost out input = tcost cost + out - input
 -- O(log n)
 {-@ reflect mergeHeap @-}
 {-@ mergeHeap :: Ord a => ts1:[BiTree a] -> ts2:[BiTree a] 
-        -> {ti:Tick {xs:[BiTree a] | len xs <= len ts1 + len ts2 && pot xs == len xs} | amortized ti (pot (tval (mergeHeap ts1 ts2))) (pot ts1 + pot ts2) <= pot (tval (mergeHeap ts1 ts2)) } @-}
+        -> {ti:Tick {xs:[BiTree a] | len xs <= len ts1 + len ts2 && pot xs == len xs} | 
+                    amortized ti (pot (tval (mergeHeap ts1 ts2))) (pot ts1 + pot ts2) <= pot (tval (mergeHeap ts1 ts2)) &&
+                    pot (tval (mergeHeap ts1 ts2)) == len (tval (mergeHeap ts1 ts2)) &&
+                    len (tval (mergeHeap ts1 ts2)) <= len ts1 + len ts2 } @-}
 mergeHeap :: Ord a => [BiTree a] -> [BiTree a] -> Tick [BiTree a]
 mergeHeap ts1 [] = pure ts1
 mergeHeap [] ts2 = pure ts2
@@ -158,7 +172,7 @@ mergeHeap ts1@(t1:ts1') ts2@(t2:ts2')
 {-@ reflect abind @-}
 abind :: Int -> Int -> Tick [a] -> ([a] -> Tick [c]) -> Tick [c]
 {-@ abind :: c:Nat -> m:Nat -> x:Tick ({v:[a] | len v <= m - 1}) -> f:(fx:[a] -> {t:Tick {xs:[c] | len xs <= len fx + 1} | amortized t (pot (tval t)) (pot fx) <= c})
-                 -> {ti:Tick {xs:[c] | len xs <= m }  | (tcost ti == c + tcost x ) && tval (f (tval x)) == tval ti  } @-}
+                 -> {ti:Tick {xs:[c] | len xs <= m}  | (tcost ti == c + tcost x ) && tval (f (tval x)) == tval ti && pot (tval ti) == len (tval ti) && len (tval ti) <= m } @-}
 abind c _ (Tick c1 x) f = Tick (c + c1) y
     where Tick _ y = f x
 -- END TRUSTED 
@@ -174,24 +188,31 @@ first (x,xs) = x
 
 {-@ reflect removeMinTree @-}
 {-@ removeMinTree :: Ord a => ts:NEHeap a
-        -> {ti:Tick {v:(BiTree a, {xsss:[BiTree a] | True }) | pott v == pot ts} | tcost ti + pott (tval ti) - pot ts <= pot ts && tcost ti <= pot ts} @-}
+        -> {ti:Tick {v:(BiTree a, [BiTree a]) | pott v == pot ts} | tcost ti + pott (tval ti) - pot ts <= pot ts && tcost ti <= pot ts} @-}
 removeMinTree :: Ord a => Heap a -> Tick (BiTree a, [BiTree a])
 removeMinTree [t] = pure (t,[])
-removeMinTree (t:ts)
+removeMinTree h@(t:ts)
     | root t < root t' = Tick (cc + 1) (t,ts)
     | otherwise        = Tick (cc + 1) (t',t:ts')
-    -- | otherwise = pure (addSnd t) </> removeMinTree ts -- (t', t:ts')
+--    | otherwise = pure (addSnd h t) </> removeMinTree ts -- (t', t:ts')
     where 
-      g (t', ts') = (t', t:ts')
-      (t', ts') = tval rem
-      rem@(Tick cc _) = removeMinTree ts
+      (Tick cc (t', ts')) = removeMinTree ts
 -- TODO rewrite without tval/tcost --> access to subformulas
 
-
+-- pott (tval ti) <= pot ts
+-- tcost ti + pott (tval ti) - pot ts <= pot ts &&
 {-@ reflect addSnd @-}
-{-@ addSnd :: a -> xs:(a, [a]) -> {v:(a, [a]) | pott v = pott xs + 1 } @-}
-addSnd ::  a -> (a, [a]) ->(a, [a])
-addSnd y (x,ys) = (x, y:ys)
+{-@ addSnd :: h:NEHeap a -> BiTree a -> {xs:(BiTree a, [BiTree a]) | pott xs = pot h - 1 } -> {v:(BiTree a, [BiTree a]) | pott v == pot h} @-}
+addSnd :: Heap a -> BiTree a -> (BiTree a, [BiTree a]) ->(BiTree a, [BiTree a])
+addSnd _ y (x,ys) = (x, y:ys)
+
+{-
+{-@ reflect addSnd @-}
+{-@ addSnd :: ts:[BiTree a] -> t:BiTree a -> {xs:(BiTree a, [BiTree a]) | pott xs == pot (t:ts) - 1} 
+        -> {ti:Tick {v:(BiTree a, [BiTree a]) | pott v == pot (t:ts)} | tcost ti = 0} @-}
+addSnd :: [BiTree a] -> BiTree a -> (BiTree a, [BiTree a]) -> Tick (BiTree a, [BiTree a])
+addSnd _ y (x,ys) = pure (x, y:ys)
+-}
 
 {-@ reflect findMin @-}
 {-@ findMin :: Ord a => h:NEHeap a 
@@ -199,21 +220,21 @@ addSnd y (x,ys) = (x, y:ys)
 findMin :: Ord a => Heap a -> Tick a
 findMin ts = RTick.liftM getRoot (RTick.liftM first (removeMinTree ts))
 
-{- 
+ 
 -- O(log n)
 {-@ reflect deleteMin @-}
 {-@ deleteMin :: Ord a => h:NEHeap a -> Tick (Heap a)@-}
 deleteMin :: Ord a => Heap a -> Tick (Heap a)
 deleteMin ts = let (Node _ x ts1 _, ts2) = tval (removeMinTree ts) in
    deleteMin' ts1 ts2 ts
-
+-- TODO rewrite with RTick library
 {-@ reflect deleteMin' @-}
 {-@ deleteMin' :: Ord a => ts1:[BiTree a] -> ts2:[BiTree a] 
-        -> {h:NEHeap a | pot h == pot ts2 + 1 && len h == len ts2 + 1 } 
-        -> {ti:Tick ({v: Heap a | pot v <= pot ts1 + pot ts2 && len v <= len ts1 + len ts2 }) | amortized ti (pot (tval (deleteMin' ts1 ts2 h))) (pot h) <= 2 * (pot ts1 + pot ts2)} @-}
+        -> {h:NEHeap a | pot h == pot ts2 + 1} 
+        -> {ti:Tick (v: Heap a) | amortized ti (pot (tval (deleteMin' ts1 ts2 h))) (pot h) <= 2 * (pot ts1 + pot ts2) && (pot (tval (deleteMin' ts1 ts2 h))) <= pot ts1 + pot ts2 } @-}
 deleteMin' :: Ord a => [BiTree a] -> [BiTree a] -> Heap a -> Tick (Heap a)
 deleteMin' ts1 ts2 h = RTick.step (tcost (removeMinTree h)) (mergeHeap (myreverse ts1) ts2)
--}
+
 
 
 {-@ reflect myreverse @-}
