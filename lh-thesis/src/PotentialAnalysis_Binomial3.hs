@@ -2,7 +2,7 @@
 {-@ LIQUID "--short-names" @-}
 {-@ LIQUID "--ple" @-}
 
-module PotentialAnalysis_Binomial2 where
+module PotentialAnalysis_Binomial3 where
 import Prelude hiding (length, pure, (<*>))
 import Language.Haskell.Liquid.RTick as RTick
 import Language.Haskell.Liquid.ProofCombinators
@@ -15,9 +15,9 @@ length [] = 0
 length (x : xs) = 1 + length xs
 
 {-@ reflect treeListSize @-}
-{-@ treeListSize :: Ord a => xs:[BiTree a] 
+{-@ treeListSize :: Ord a => xs:[GBiTree a r] 
         -> {v:Nat | (len  xs <= v) && (v = 0 <=> len xs = 0)} @-}
-treeListSize :: Ord a => [BiTree a] -> Int
+treeListSize :: Ord a => [GBiTree a r] -> Int
 treeListSize [] = 0
 treeListSize (x:xs) = treeSize x + treeListSize xs
 
@@ -25,22 +25,69 @@ treeListSize (x:xs) = treeSize x + treeListSize xs
 {-@ type NEHeap a = {h: Heap a | 0 < len h} @-}
 
 {-@
-data BiTree [rank] a =
+data GBiTree a r =
     Node
-        { rank :: Nat
+        { rank :: r
         , root :: a
-        , subtrees :: [BiTree a]
+        , subtrees :: {v:[GBiTree a r] | len v ~~ rank}
         , treeSize :: {v:Pos | v = 1 + treeListSize subtrees}
         }
 @-}
-data BiTree a =
+data GBiTree a r =
     Node
-        { rank :: Int
+        { rank :: r 
         , root :: a
-        , subtrees :: [BiTree a]
+        , subtrees :: [GBiTree a r]
         , treeSize :: Int
         }
     deriving (Eq, Ord)
+
+
+data GHeap a r = Emp | Cons {hhead :: GBiTree a r, hcons :: GHeap a r }
+{-@ data GHeap a r = Emp | Cons {hhead :: GBiTree a r, hcons :: GHeap a {r:r | r /= rank hhead}} @-}
+
+
+
+gheap :: GHeap Int Int 
+gheap = Cons (Node 0 1 [] 1) gheap2 
+
+gheap2 :: GHeap Int Int 
+{-@ gheap2 :: GHeap Int {v:Nat | v /= 0 } @-}
+gheap2 = Cons (Node 1 1 [bi3] undefined) Emp
+
+
+-- treeSize bi3 == 2 
+---------------------------------------
+-- 2 == 1 + treeListSize [bi3]
+-- 
+
+
+bi3 :: GBiTree Int Int 
+{-@ bi3 :: {bit:GBiTree Int ({v:Nat | v /= 0 })  | treeSize bit == 2 }@-}
+bi3 = Node 2 1 [] 1 
+
+
+
+heap :: Heap Int 
+heap = [bi1, bi2]
+
+{-@ reflect bi1 @-}
+{-@ reflect bi2 @-}
+{-@ bi1 :: GBiTree Int {v:Nat | v /= 0 }@-} 
+bi1, bi2 :: BiTree Int 
+bi1 = Node 0 1 [] 1
+bi2 = Node 1 1 [bi1] 2
+
+prop1 :: () -> ()
+{-@ prop1 :: () -> {treeSize bi1 == 1} @-}
+prop1 _ = ()
+
+prop2 :: () -> ()
+{-@ prop2 :: () -> {treeSize bi2 == 2} @-}
+prop2 _ = () 
+
+type BiTree a = GBiTree a Int 
+{- type BiTree a = GBiTree a Nat @-} 
 
 {-@ reflect link @-}
 {-@ link :: t1:BiTree a -> {t2:BiTree a | rank t2 = rank t1} 
@@ -61,13 +108,7 @@ data Heap a =
 -}
 
 
-heap :: Heap Int 
-heap = [bi1, bi2]
-
-bi1, bi2 :: BiTree Int 
-bi1 = Node 0 1 [] 1
-bi2 = Node 1 1 [] 1
-
+{- 
 
 {-@ reflect log2 @-}
 {-@ log2 :: n:Pos -> v:Nat / [n]@-}
@@ -256,3 +297,5 @@ myreverse l =  rev l []
 rev :: [a] -> [a] -> [a]
 rev []     a = a
 rev (x:xs) a = rev xs (x:a)
+
+-}
