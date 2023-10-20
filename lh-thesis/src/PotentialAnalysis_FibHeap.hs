@@ -391,7 +391,7 @@ getParentMaybe t t2
                 (getDepth t t2 ?? propPostFixId (subtrees t) ??
                 getParentMaybe' t (subtrees t) t2)
 
-
+-- example xs=[1,3] ys=[1,2,3]
 {-@ reflect isPostFix @-}
 {-@ isPostFix :: xs:[a] -> ys:[a] -> Bool / [len ys] @-}
 isPostFix :: Eq a => [a] -> [a] -> Bool
@@ -478,8 +478,20 @@ getParentMaybe' g (t:ts) t2
 {-@ postFixProp :: t:FibTree a -> ts:[FibTree a] 
         -> {gs:[FibTree a] | isPostFix (t:ts) gs}
         -> {isPostFix ts gs} @-}
-postFixProp :: FibTree a -> [FibTree a] -> [FibTree a] -> ()
-postFixProp = undefined
+postFixProp :: Eq (FibTree a) => FibTree a -> [FibTree a] -> [FibTree a] -> ()
+postFixProp _ [] _ = ()
+postFixProp _ _ [] = ()
+postFixProp t ts@(t':ts') gs@(g':gs')
+  | t == g' = undefined -- isPostFix ts gs'
+  | length ts >= length gs = ()
+  | otherwise = undefined -- isPostFix (t:ts) gs'
+
+{-@ postFixProp2 :: ts:[FibTree a] -> g:FibTree a
+        -> {gs:[FibTree a] | isPostFix ts gs}
+        -> {isPostFix ts (g:gs)} @-}
+postFixProp2 :: Eq (FibTree a) => [FibTree a] -> FibTree a -> [FibTree a] -> ()
+postFixProp2 [] _ _ = ()
+postFixProp2 (t:ts) g gs = undefined
 
 
 checkProp2 :: FibTree a -> FibTree a -> [FibTree a] -> FibTree a -> Maybe (FibTree a)  -> Maybe (FibTree a)
