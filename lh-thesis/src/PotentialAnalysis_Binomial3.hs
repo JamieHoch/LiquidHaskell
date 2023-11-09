@@ -2,7 +2,7 @@
 {-@ LIQUID "--short-names" @-}
 {-@ LIQUID "--ple" @-}
 
-module PotentialAnalysis_Binomial2 where
+module PotentialAnalysis_Binomial3 where
 import Prelude hiding (length, pure, (<*>))
 import Language.Haskell.Liquid.RTick as RTick
 import Language.Haskell.Liquid.ProofCombinators
@@ -15,9 +15,9 @@ length [] = 0
 length (x : xs) = 1 + length xs
 
 {-@ reflect treeListSize @-}
-{-@ treeListSize :: Ord a => xs:[BiTree a] 
+{-@ treeListSize :: Ord a => xs:[GBiTree a r] 
         -> {v:Nat | (len  xs <= v) && (v = 0 <=> len xs = 0)} @-}
-treeListSize :: Ord a => [BiTree a] -> Int
+treeListSize :: Ord a => [GBiTree a r] -> Int
 treeListSize [] = 0
 treeListSize (x:xs) = treeSize x + treeListSize xs
 
@@ -25,22 +25,69 @@ treeListSize (x:xs) = treeSize x + treeListSize xs
 {-@ type NEHeap a = {h: Heap a | 0 < len h} @-}
 
 {-@
-data BiTree [rank] a =
+data GBiTree a r =
     Node
-        { rank :: Nat
+        { rank :: r
         , root :: a
-        , subtrees :: [BiTree a]
+        , subtrees :: {v:[GBiTree a r] | len v ~~ rank}
         , treeSize :: {v:Pos | v = 1 + treeListSize subtrees}
         }
 @-}
-data BiTree a =
+data GBiTree a r =
     Node
-        { rank :: Int
+        { rank :: r 
         , root :: a
-        , subtrees :: [BiTree a]
+        , subtrees :: [GBiTree a r]
         , treeSize :: Int
         }
     deriving (Eq, Ord)
+
+
+data GHeap a r = Emp | Cons {hhead :: GBiTree a r, hcons :: GHeap a r }
+{-@ data GHeap a r = Emp | Cons {hhead :: GBiTree a r, hcons :: GHeap a {r:r | r /= rank hhead}} @-}
+
+
+
+gheap :: GHeap Int Int 
+gheap = Cons (Node 0 1 [] 1) gheap2 
+
+gheap2 :: GHeap Int Int 
+{-@ gheap2 :: GHeap Int {v:Nat | v /= 0 } @-}
+gheap2 = Cons (Node 1 1 [bi3] undefined) Emp
+
+
+-- treeSize bi3 == 2 
+---------------------------------------
+-- 2 == 1 + treeListSize [bi3]
+-- 
+
+
+bi3 :: GBiTree Int Int 
+{-@ bi3 :: {bit:GBiTree Int ({v:Nat | v /= 0 })  | treeSize bit == 2 }@-}
+bi3 = Node 2 1 [] 1 
+
+
+
+heap :: Heap Int 
+heap = [bi1, bi2]
+
+{-@ reflect bi1 @-}
+{-@ reflect bi2 @-}
+{-@ bi1 :: GBiTree Int {v:Nat | v /= 0 }@-} 
+bi1, bi2 :: BiTree Int 
+bi1 = Node 0 1 [] 1
+bi2 = Node 1 1 [bi1] 2
+
+prop1 :: () -> ()
+{-@ prop1 :: () -> {treeSize bi1 == 1} @-}
+prop1 _ = ()
+
+prop2 :: () -> ()
+{-@ prop2 :: () -> {treeSize bi2 == 2} @-}
+prop2 _ = () 
+
+type BiTree a = GBiTree a Int 
+{- type BiTree a = GBiTree a Nat @-} 
 
 {-@ reflect link @-}
 {-@ link :: t1:BiTree a -> {t2:BiTree a | rank t2 = rank t1} 
@@ -61,13 +108,7 @@ data Heap a =
 -}
 
 
-heap :: Heap Int 
-heap = [bi1, bi2]
-
-bi1, bi2 :: BiTree Int 
-bi1 = Node 0 1 [] 1
-bi2 = Node 1 1 [] 1
-
+{- 
 
 {-@ reflect log2 @-}
 {-@ log2 :: n:Pos -> v:Nat / [n]@-}
@@ -111,6 +152,7 @@ pot []     = 0
 pot (x:xs) = 1 + (pot xs)
 
 {-@ invariant {xs:[a] | pot xs == len xs } @-}
+invariant = ()
 
 -- potential of tuple
 {-@ measure pott @-}
@@ -207,43 +249,20 @@ removeMinTree h@(t:ts)
       (Tick cc (t', ts')) = removeMinTree ts
 -- TODO rewrite without tval/tcost --> access to subformulas
 
+-- pott (tval ti) <= pot ts
+-- tcost ti + pott (tval ti) - pot ts <= pot ts &&
+{-@ reflect addSnd @-}
+{-@ addSnd :: h:NEHeap a -> BiTree a -> {xs:(BiTree a, [BiTree a]) | pott xs = pot h - 1 } -> {v:(BiTree a, [BiTree a]) | pott v == pot h} @-}
+addSnd :: Heap a -> BiTree a -> (BiTree a, [BiTree a]) ->(BiTree a, [BiTree a])
+addSnd _ y (x,ys) = (x, y:ys)
 
-
-{-@ removeMinTree' :: Ord a => ts:NEHeap a
-        -> {ti:Tick {v:(BiTree a, [BiTree a]) | pott v == pot ts} |  pott (tval ti) == pot ts && tcost ti <= pot ts && tcost ti + pott (tval ti) - pot ts <= pot ts} @-}
-removeMinTree' :: Ord a => Heap a -> Tick (BiTree a, [BiTree a])
-removeMinTree' [t]    = pure (t,[])
-removeMinTree' (t:ts) = boo (t:ts) (ifTick 0 (removeMinTree' ts) (\(t', ts') -> (root t < root t')) (\(t', ts') -> pure (t,ts)) (\(t', ts') -> pure (t',t:ts')))
-
-
-{-@ reflect propPott @-}
-{-@ propPott :: ts:Int-> i:{v:(BiTree a, [BiTree a]) | pott v == ts } -> {v:Bool | v <=> (pott i == ts) } @-}
-propPott :: Int -> (BiTree a, [BiTree a]) -> Bool
-propPott ts v = pott v == ts
-
-
-
-{-@ valueTickPushProp :: p:(a -> Bool) -> ti:(Tick {v:a | p v})
-        -> {to:Tick {v:a | p v}  | to == ti && p (tval to) && tcost to == tcost ti && tval to == tval ti} @-}
-valueTickPushProp :: (a -> Bool) -> Tick a -> Tick a
-valueTickPushProp _ (Tick c v) = Tick c v  
-
-
-
-{-@ boo :: ts:NEHeap a -> ti:Tick {v:(BiTree a, [BiTree a]) | pott v == pot ts} 
-        -> {to:Tick {v:(BiTree a, [BiTree a]) | pott v == pot ts}  | to == ti && pott (tval to) == pot ts && tcost to == tcost ti && tval to == tval ti} @-}
-boo :: Heap a -> Tick (BiTree a, [BiTree a]) -> Tick (BiTree a, [BiTree a])
-boo _ (Tick c v) = Tick c v  
-
-
--- THIS TOO IS TRUSTED LIBRARY CODE 
--- NV: Here the +1 comes because I tick! 
-{-@ reflect ifTick @-}
-{-@ ifTick :: c:Nat -> t:Tick a -> (a -> Bool) -> tb:(a -> {ti:Tick b | tcost ti <= c}) -> fb:(a -> {ti:Tick b | tcost ti <= c}) 
-           -> {to:Tick b | (tcost to <= tcost t + c + 1) && (tval to == tval (tb (tval t)) || tval to == tval (fb (tval t))) } @-}
-ifTick :: Int -> Tick a -> (a -> Bool) -> (a -> Tick b) -> (a -> Tick b) -> Tick b
-ifTick _ (Tick c v) b t e = RTick.step (c + 1) (if b v then t v else e v)  
--- END OF TRUSTED CODE 
+{-
+{-@ reflect addSnd @-}
+{-@ addSnd :: ts:[BiTree a] -> t:BiTree a -> {xs:(BiTree a, [BiTree a]) | pott xs == pot (t:ts) - 1} 
+        -> {ti:Tick {v:(BiTree a, [BiTree a]) | pott v == pot (t:ts)} | tcost ti = 0} @-}
+addSnd :: [BiTree a] -> BiTree a -> (BiTree a, [BiTree a]) -> Tick (BiTree a, [BiTree a])
+addSnd _ y (x,ys) = pure (x, y:ys)
+-}
 
 {-@ reflect findMin @-}
 {-@ findMin :: Ord a => h:NEHeap a 
@@ -278,3 +297,5 @@ myreverse l =  rev l []
 rev :: [a] -> [a] -> [a]
 rev []     a = a
 rev (x:xs) a = rev xs (x:a)
+
+-}
