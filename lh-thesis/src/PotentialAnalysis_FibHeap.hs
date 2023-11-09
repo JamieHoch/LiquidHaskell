@@ -18,6 +18,12 @@ import FibHeap_Props
 {-@ type Pos = {v:Int | 0 < v} @-}
 {-@ type NEFibHeap = {v : FibHeap a | notEmptyFibHeap v} @-}
 {-@ type EFibHeap = {v : FibHeap a | not (notEmptyFibHeap v)} @-}
+{-@ type AEqFibHeap t v = {b : Bool | rank t == rank v 
+      && marked t == marked v && treeSize t == treeSize v 
+      && AEqFibHeaps (subtrees t) (subtrees v) } @-}
+{-@ type AEqFibHeaps ts vs = {b : Bool | length ts == length vs 
+      && (length ts == 0 || (AEqFibHeaps (head ts) (head vs) 
+      && AEqFibHeaps (tail ts) (tail vs)) )} @-}
 
 {-@ reflect treeListSize @-}
 {-@ treeListSize :: Ord a => xs:[FibTree a] -> {v:Nat | (length  xs <= v) && (v = 0 <=> length xs = 0) && (length xs == 0 || v > 0)} @-}
@@ -340,7 +346,11 @@ compareRanks (t:ts) (v:vs) = rank t == rank v && compareRanks ts vs
 -- returns heap where v is replaced by k
 {-@ replace :: {ts:[FibTree a] | equalRank ts} -> a -> a 
         -> {r:Int | length ts == 0 || r == getRank (head ts)}
-        -> {vs:[FibTree a] | length vs == length ts && (length vs == 0 || getRank (head vs) == getRank (head ts)) &&  equalRank vs && almostEq' ts vs} / [treeListSize ts] @-}
+        -> {vs:[FibTree a] | length vs == length ts 
+        && (length vs == 0 || getRank (head vs) == getRank (head ts)) 
+        && equalRank vs && almostEq' ts vs} 
+        / [treeListSize ts] 
+@-}
 -- length vs == length ts && (length vs == 0 || (equalRank vs && getRank (head vs) == r + 1))
 replace :: Ord a => [FibTree a] -> a -> a -> Int -> [FibTree a]
 replace [] v k r = []
@@ -349,51 +359,92 @@ replace [t@(Node r x [] mark sz)] v k r'
   | otherwise = [t]
 replace [t@(Node r x ts mark sz)] v k r'
   | x == v =
-    assume (almostEq' [t] [Node r k ts mark sz]) ??
-    [Node r k ts mark sz] --eqProp2 t (myRepl t k) ?? [myRepl t k]
+    almostEqProp t (Node r k ts mark sz) ??
+    almostEqtoEqProp t (Node r k ts mark sz) ??
+    [Node r k ts mark sz]
   | otherwise =
-    assume (equalRank (replace (subtrees t) v k (r+1)) && getRank (head (replace (subtrees t) v k (r+1))) == r + 1) ??
-    assume (almostEq' (subtrees t) (replace (subtrees t) v k (r+1))) ??
-    assume (sz == (1 + treeListSize (replace (subtrees t) v k (r+1)))) ??
-    [Node r x (replace (subtrees t) v k (r+1)) mark sz] -- sz = (1 + treeListSize (replace (subtrees t) v k))
+    equalRank (replace (subtrees t) v k (r+1)) ??
+    (getRank (head (replace (subtrees t) v k (r+1))) == r + 1) ??
+    almostEq' (subtrees t) (replace (subtrees t) v k (r+1)) ??
+    (sz == (1 + treeListSize (replace (subtrees t) v k (r+1)))) ??
+    [Node r x (replace (subtrees t) v k (r+1)) mark sz]
 replace (t:ts) v k r = (0 < treeListSize ts) ??
       almostEq t (replace' t v k) ??
       almostEq' ts (replace ts v k r) ??
-      assume (equalRank (replace' t v k : replace ts v k r)) ??
+      eqRankProp (replace' t v k) (replace ts v k r) ??
       (replace' t v k : replace ts v k r)
-
---almostEqProp :: {ts:[FibTree a] | length ts > 0} -> {vs:[FibTree a] | almostEq' ts vs} 
---      -> {almostEq' (subtrees (head ts))} 
-
-{-@ szProp  :: ts:[FibTree a] -> {vs:[FibTree a] | almostEq' ts vs} -> {treeListSize ts == treeListSize vs} @-}
-szProp :: [FibTree a] -> [FibTree a] -> Proof
-szProp t v = undefined
 
 {-@ replace' :: Ord a => t:FibTree a -> a -> a -> {v:FibTree a | almostEq t v} / [treeSize t]@-}
 replace' :: Ord a => FibTree a -> a -> a -> FibTree a
 replace' t@(Node r x [] mark sz) v k
-  | x == v = myRepl t k
+  | x == v = eqProp t ?? Node r k [] mark sz
   | otherwise = t
 replace' t@(Node r x ts mark sz) v k
-  | x == v = myRepl t k
+  | x == v = eqProp t ?? Node r k ts mark sz
   | otherwise =
-    assume (getRank (head (subtrees t)) == r + 1 )??
-    assume (almostEq' (subtrees t) (replace (subtrees t) v k (r+1))) ??
-    assume (sz == 1 + treeListSize (replace (subtrees t) v k (r+1))) ??
-    assume (almostEq t (Node r x (replace (subtrees t) v k (r+1)) mark sz)) ??
+    (getRank (head (subtrees t)) == r + 1) ??
+    almostEq' (subtrees t) (replace (subtrees t) v k (r+1)) ??
+    (sz == 1 + treeListSize (replace (subtrees t) v k (r+1))) ??
+    almostEq t (Node r x (replace (subtrees t) v k (r+1)) mark sz) ??
     Node r x (replace (subtrees t) v k (r+1)) mark sz
 
-{-@ myRepl :: t:FibTree a -> a -> {v:FibTree a | almostEq t v} @-}
-myRepl :: FibTree a -> a -> FibTree a
-myRepl t@(Node r x ts mark sz) k = eqProp t ?? Node r k ts mark sz
+{-@ almostEqProp :: t:FibTree a 
+      -> {v:FibTree a | rank t == rank v && subtrees t == subtrees v && marked t == marked v && treeSize t == treeSize v} 
+      -> {almostEq t v} @-}
+almostEqProp :: Ord a => FibTree a -> FibTree a -> Proof
+almostEqProp t v =
+  almostEq t v
+  ? eqPropTs (subtrees t)
+  ***QED
 
-{-@ eqProp :: t:FibTree a -> {almostEq' (subtrees t) (subtrees t)} @-}
-eqProp :: FibTree a -> Proof
-eqProp = undefined
+{-@ almostEqtoEqProp :: t:FibTree a 
+      -> {v:FibTree a | almostEq t v} 
+      -> {almostEq' (singl t) (singl v)} @-}
+almostEqtoEqProp :: Ord a => FibTree a -> FibTree a -> Proof
+almostEqtoEqProp t v =
+  almostEq (head [t]) (head [v]) ??
+  almostEq' [t] [v] 
+  ***QED
 
+{-@ eqProp :: t:FibTree a -> {almostEq' (subtrees t) (subtrees t)} /[treeSize t] @-}
+eqProp :: Ord a => FibTree a -> Proof
+eqProp t@(Node r x [] m sz) = ()
+eqProp t =
+  almostEq' (subtrees t) (subtrees t)
+  ? eqPropTs (subtrees t)
+  ***QED
+  
+{-@ eqPropT :: t:FibTree a -> {almostEq t t} / [treeSize t] @-}
+eqPropT :: Ord a => FibTree a -> Proof
+eqPropT t =
+  (treeListSize (subtrees t) < treeSize t) ??
+  almostEq t t 
+  ? eqPropTs (subtrees t) 
+  ***QED
+
+{-@ eqPropTs :: ts:[FibTree a] -> {almostEq' ts ts} / [treeListSize ts] @-}
+eqPropTs :: Ord a => [FibTree a] -> Proof
+eqPropTs [] = ()
+eqPropTs [t] = 
+  (treeListSize (subtrees t) < treeSize t) ??
+  almostEq t t 
+  ? eqPropTs (subtrees t) 
+  ***QED
+eqPropTs (t:ts) =
+  (0 < treeListSize ts) ??
+  (treeSize t < treeListSize (t:ts)) ?? 
+  almostEq' (t:ts) (t:ts)
+  ? eqPropT t
+  ? eqPropTs ts 
+  ***QED
+{-
 {-@ eqProp2 :: t:FibTree a -> {v:FibTree a | almostEq t v} -> {almostEq' (singl t) (singl v)} @-}
-eqProp2 :: FibTree a -> FibTree a -> Proof
-eqProp2 = undefined
+eqProp2 :: Ord a => FibTree a -> FibTree a -> Proof
+eqProp2 t v = 
+  almostEq t v 
+  === almostEq' (singl t) (singl v)
+  ***QED
+-}
 
 {-@ reflect almostEq @-}
 {-@ almostEq :: t:FibTree a -> v:FibTree a 
@@ -413,10 +464,8 @@ almostEq t v
 {-@ almostEq' :: ts:[FibTree a] -> vs:[FibTree a] 
       -> {b:Bool | not b || length ts == length vs 
       && (length ts == 0 || (almostEq (head ts) (head vs) 
-      && almostEq' (tail ts) (tail vs) 
-      && rank (head ts) == rank (head vs)
-      && marked (head ts) == marked (head vs))
-      && treeSize (head ts) == treeSize (head vs))} / [treeListSize ts] 
+      && almostEq' (tail ts) (tail vs)
+      && treeListSize ts == treeListSize vs))} / [treeListSize ts] 
       @-}
 almostEq' :: Ord a => [FibTree a] -> [FibTree a] -> Bool
 almostEq' [] [] = True
