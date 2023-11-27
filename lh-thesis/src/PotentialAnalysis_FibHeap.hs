@@ -12,7 +12,6 @@ import Prelude hiding (pure, (++), (<*>), length, head, tail)
 import Language.Haskell.Liquid.RTick as RTick
 import Language.Haskell.Liquid.ProofCombinators
 import GHC.Base (undefined)
-import FibHeap_Props
 import Data.Maybe (fromJust, isJust, isNothing)
 
 

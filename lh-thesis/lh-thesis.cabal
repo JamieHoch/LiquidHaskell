@@ -17,7 +17,6 @@ library
   exposed-modules:
       FibHeap
       MyBinomial
-      Invariants 
       PotentialAnalysis_FibHeap
       PotentialAnalysis_Binomial2
   hs-source-dirs:
