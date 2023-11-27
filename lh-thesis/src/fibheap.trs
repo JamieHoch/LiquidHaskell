@@ -1,0 +1,47 @@
+(VAR x y xs ys r r1 r2 t1 t2 x1 x2 t t' ts ts' ts1 ts2 ts1' ts2' v k)
+(STRATEGY INNERMOST)
+
+(RULES
+	pair1(pair(x,y)) -> x
+	pair2(pair(x,y)) -> y
+
+	node1(node(r,x,ts,m)) -> r
+	node2(node(r,x,ts,m)) -> x
+	node3(node(r,x,ts,m)) -> ts
+	node4(node(r,x,ts,m)) -> m
+	
+	deleteMin( heap(ts) ) -> heap ( mergeTree( reverse( node3(pair1(removeMinTree(ts))) ), pair1( removeMinTree(ts) ) ) )
+
+	concat(nil, xs) -> xs
+	concat(cons(x, xs), ys) -> cons(x, concat(xs, ys))
+
+	reverse(nil) -> nil
+	reverse(cons(x, xs)) -> append(reverse(xs),cons(x, nil))
+
+	parent(node(r, x, nil, mk), t2) -> nil
+	parent(node(r, x, cons(t2, ts), mk), t2) -> node(r, x, cons(t2, ts), mk)
+	parent(node(r,x,ts,mk),t2) -> parent'(ts,t2)
+
+	parent'(nil,t2) -> nil
+	parent'(cons(node(r,x,nil,mk),nil), t2) -> nil
+	parent'(cons(node(r,x,ts,mk),nil),t2) -> parent'(ts,t2)
+	parent'(cons(t,ts), t2) -> parent(t, t2)
+	parent'(cons(t,ts), t2) -> parent'(ts, t2)
+
+	deleteSubTree'(cons(node(r, x, ts, mk), ts'), k) -> cons(node(r, x, deleteSubTree'(ts, k), mk),deleteSubTree'(ts', k))
+     
+	cut(ts, t) -> t
+	cut(ts, node(r,x,ts2,mk)) -> cons(node(r,x,ts2,mk),deleteSubTree'(ts,x))
+
+	cascadingCut(cons(t,ts'), y) -> cons(t,ts')
+	cascadingCut(cons(t,ts'), y) -> mark'(cons(t,ts'),root(y))
+	cascadingCut(cons(t,ts'), y) -> cascadingCut( cut(cons(t,ts'), y), parent'(cons(t,ts'), y) )
+
+	performCuts(ts, k) -> cascadingCut ( cut(ts, getTreeMaybe'(ts,k)), parent'(ts,getTreeMaybe'(ts,k)) )
+	performCuts(ts, k) -> ts
+	  
+	decreasekey(ts,v,k) -> performCuts( replace(ts,v,k), k )
+	decreasekey(ts,v,k) -> ts
+
+	delete(ts, v) -> pair2( extractMin( decreasekey(ts,v,0) ) )
+)	     
