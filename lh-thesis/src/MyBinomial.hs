@@ -5,16 +5,16 @@
 
 module MyBinomial 
     ( link
-    , insTree
-    , insert
-    , mergeTree
-    , mergeHeap
-    , removeMinTree
-    , findMin
+    --, insTree
+    --, insert
+    --, mergeTree
+    --, mergeHeap
+    --, removeMinTree
+    --, findMin
    -- , deleteMin
     )
 where
-import Prelude hiding (length, head, min, last, (++))
+import Prelude hiding (length, head, min, last, (++), reverse, max)
 import Language.Haskell.Liquid.ProofCombinators
 
 
@@ -125,10 +125,10 @@ min x1 x2
     | x1 <= x2 = x1
     | otherwise = x2
 
-{-@ reflect minS @-}
-minS :: Ord a => a -> a -> a
-minS x1 x2
-    | x1 < x2 = x1
+{-@ reflect max @-}
+max :: Ord a => a -> a -> a
+max x1 x2
+    | x1 >= x2 = x1
     | otherwise = x2
 
 {-@ reflect maxL @-}
@@ -136,7 +136,7 @@ minS x1 x2
 maxL :: [BiTree a] -> Int
 maxL [t] = rank t
 maxL (t:ts)
-    | rank t >= maxL ts = rank t
+    | rank t > maxL ts = rank t
     | otherwise = maxL ts
 
 {-@ reflect minL @-}
@@ -150,34 +150,9 @@ minL (t:ts)
 {-@ infix   ++ @-}
 {-@ reflect ++ @-}
 {-@ (++) :: xs:[a] -> ys:[a] -> {zs:[a] | length zs == length xs + length ys} @-}
-(++) :: [a] -> [a] -> [a]
+(++) :: Eq a => [a] -> [a] -> [a]
 []     ++ ys = ys
 (x:xs) ++ ys = x:(xs ++ ys)
-
-{-@ appProp :: xs:[a] -> {xs++[] = xs} @-}
-appProp :: Ord a => [a] -> Proof
-appProp [] = ()
-appProp (x:xs) = 
-    ((x:xs) ++ [] == x:(xs ++ [])) ??
-    appProp xs ??
-    ()
-
-{-@ appProp3 :: xs:[a] -> {[]++xs = xs} @-}
-appProp3 :: Ord a => [a] -> Proof
-appProp3 [] = ()
-appProp3 (x:xs) = 
-    ([]++(x:xs) == (x:xs)) ??
-    ()
-
-{-@ appProp2 :: x:a -> ys:[a] -> {x:ys = [x]++ys} @-}
-appProp2 :: Ord a => a -> [a] -> Proof
-appProp2 x [] = 
-    appProp [x] ?? 
-    () 
-appProp2 x (y:ys) = 
-    appProp3 (y:ys) ??
-    ([x]++(y:ys) == x:([]++(y:ys))) ??
-    () 
 
 {-@ reflect sortedProp @-}
 {-@ sortedProp :: t1:BiTree a -> {t2:BiTree a | root t1 <= root t2} 
@@ -185,6 +160,87 @@ appProp2 x (y:ys) =
 sortedProp :: BiTree a -> BiTree a -> Proof
 sortedProp t1@(Node _ x [] _) t2 = ()
 sortedProp t1 t2 = ()
+
+{-@ oRtoORHProp :: {ts:[BiTree a] | ordRank ts} -> {ordRankH (reverse ts)} @-}
+oRtoORHProp :: Eq a => [BiTree a] -> Proof
+oRtoORHProp [] = ()
+oRtoORHProp [t] = ()
+oRtoORHProp (t:ts) =
+    oRtoORHProp ts ??
+    maxLProp2 t ts ??
+    maxLPropRev ts ??
+    maxLProp1 (reverse ts) t ??
+    ()
+
+{-@ maxLProp1 :: {ts:[BiTree a] | ordRankH ts} -> {t:BiTree a | rank t > maxL ts}
+        -> {ordRankH (ts ++ [t])} @-}
+maxLProp1 :: Eq a => [BiTree a] -> BiTree a -> Proof
+maxLProp1 [] t = ()
+maxLProp1 [t'] t = ()
+maxLProp1 (t':ts) t =
+    (rank t > maxL (t':ts)) ??
+    ordRankPropH2 t' ts ??
+    maxLProp1 ts t ??
+    ()
+
+{-@ maxLProp2 :: t:BiTree a -> {ts:[BiTree a] | length ts > 0 && ordRank (t:ts)}
+        -> {rank t > maxL ts} @-}
+maxLProp2 :: Eq a => BiTree a -> [BiTree a] -> Proof
+maxLProp2 t [t2] = ()
+maxLProp2 t (t':ts) =
+    maxLProp2 t' ts ??
+    ()
+
+{-@ maxLPropRev :: {ts:[BiTree a] | length ts > 0} 
+            -> {maxL ts == maxL (reverse ts)}@-}
+maxLPropRev :: Eq a => [BiTree a] -> Proof
+maxLPropRev [t] = ()
+maxLPropRev (t:ts) =
+    maxLApp (reverse ts) [t] ??
+    maxLPropRev ts ??
+    (maxL (t:ts) == max (maxL ts) (rank t)) ?? 
+    ()
+
+{-@ maxLApp :: {ts1:[BiTree a] | length ts1 > 0} -> {ts2:[BiTree a] | length ts2 > 0}
+            -> {maxL (ts1++ts2) == max (maxL ts1) (maxL ts2)}@-}
+maxLApp :: Eq a => [BiTree a] -> [BiTree a] ->  Proof
+maxLApp [t1] [t2] =
+    (maxL (t1:[t2]) == max (rank t1) (rank t2)) ??
+    ()
+maxLApp [t1] ts = 
+    (maxL (t1:ts) == max (rank t1) (maxL ts)) ?? 
+    ()
+maxLApp (t1:ts1) ts2
+    | rank t1 > maxL (ts1++ts2) && maxL ts1 > maxL ts2 =
+        maxLApp ts1 ts2 ??
+        ()
+    | rank t1 > maxL (ts1++ts2) && maxL ts1 < maxL ts2 =
+        maxLApp ts1 ts2 ??
+        ()
+    | rank t1 > maxL (ts1++ts2) && maxL ts1 == maxL ts2 =
+        maxLApp ts1 ts2 ??
+        ()
+    | rank t1 <= maxL (ts1++ts2) && maxL ts1 > maxL ts2 =
+        maxLApp ts1 ts2 ??
+        () 
+    | rank t1 <= maxL (ts1++ts2) && maxL ts1 < maxL ts2 =
+        maxLApp ts1 ts2 ??
+        (maxL ((t1:ts1)++ts2) == max (maxL (t1:ts1)) (maxL ts2)) ??
+        ()
+    | rank t1 <= maxL (ts1++ts2) && maxL ts1 == maxL ts2 =
+        maxLApp ts1 ts2 ??
+        () 
+    
+
+{-@ reflect reverse @-}
+{-@ reverse :: ts:[a] -> {vs:[a] | length ts == length vs} @-}
+reverse [] = []
+reverse (x:xs) = reverse xs ++ [x]
+
+{-@ reflect rev @-}
+rev :: [a] -> [a] -> [a]
+rev [] ys = ys
+rev (x:xs) ys = rev xs (x:ys)
 
 {-@ reflect ordRankProp @-}
 {-@ ordRankProp :: r:Nat -> {t:BiTree a | r == rank t} 
@@ -194,7 +250,7 @@ ordRankProp :: Int -> BiTree a -> [BiTree a] -> Proof
 ordRankProp r t [] = ()
 ordRankProp r t (t':ts) = ()
 
---{-@ reflect ordRankPropH @-}
+{-@ reflect ordRankPropH @-}
 {-@ ordRankPropH :: t:BiTree a 
             -> {ts:[BiTree a] | ordRankH ts && (length ts == 0 || rank t < getRank (head ts))}
             -> {ordRankH (t:ts)} @-}
@@ -203,6 +259,7 @@ ordRankPropH t [] = ()
 ordRankPropH t [t'] = ()
 ordRankPropH t (t':ts) = ()
 
+{-@ reflect minLOrdProp @-}
 {-@ minLOrdProp :: {ts:[BiTree a] | length ts > 0 && ordRankH ts} 
             -> {minL ts = rank (head ts)} @-}
 minLOrdProp :: Eq a => [BiTree a] -> Proof
@@ -211,14 +268,15 @@ minLOrdProp (t:t':ts) =
     minLOrdProp (t':ts) ??
     ()
 
+{-@ reflect ordRankPropH2 @-}
 {-@ ordRankPropH2 :: t:BiTree a 
             -> {ts:[BiTree a] | ordRankH (t:ts)}
             -> {ordRankH ts} @-}
-ordRankPropH2 :: Ord a => BiTree a -> [BiTree a] -> Proof
+ordRankPropH2 :: BiTree a -> [BiTree a] -> Proof
 ordRankPropH2 t [] = ()
 ordRankPropH2 t (t':ts) = ()
 
---{-@ reflect insTree @-}
+{-@ reflect insTree @-}
 {-@ insTree :: t:BiTree a -> {ts:[BiTree a] | ordRankH ts} 
             -> {zs:[BiTree a]| length zs > 0 && length zs <= length ts + 1 
             && ordRankH zs && minL zs >= minL (t:ts)} @-}
@@ -239,6 +297,7 @@ insTree t ts@(t':ts')
         minLProp t' (link t t') ts' ??
         insTree (link t t') ts'
 
+{-@ reflect ordMinLProp @-}
 {-@ ordMinLProp :: t:BiTree a 
             -> {ts:[BiTree a] | ordRankH ts && rank t < minL ts} 
             -> {ordRankH (t:ts)} @-}
@@ -247,7 +306,8 @@ ordMinLProp t [] = ()
 ordMinLProp t ts =
     ordMinLProp2 t ts ??
     ()
-    
+
+{-@ reflect ordMinLProp2 @-}   
 {-@ ordMinLProp2 :: t:BiTree a 
             -> {ts:[BiTree a] | rank t < minL ts} 
             -> {length ts == 0 || rank t < rank (head ts)} @-}
@@ -258,6 +318,7 @@ ordMinLProp2 t (t':ts) =
     (rank t < rank t') ??
     () 
 
+{-@ reflect minLProp @-}
 {-@ minLProp :: t':BiTree a -> {t:BiTree a | rank t' < rank t} 
             -> {ts':[BiTree a] | ordRankH (t':ts')} 
             -> {rank t' < minL (t:ts')} @-}
@@ -269,13 +330,17 @@ minLProp t' t ts' =
     assert (rank t' < minL (t:ts')) ??
     ()
 
+{-@ reflect minLProp2 @-}
 {-@ minLProp2 :: t:BiTree a -> {ts:[BiTree a] | ordRankH (t:ts)} 
             -> {length ts == 0 || minL ts > rank t} @-}
 minLProp2 :: Eq a => BiTree a -> [BiTree a] -> Proof
 minLProp2 t [] = ()
 minLProp2 t [t'] = ()
-minLProp2 t (t':ts) = () ? minLProp2 t' ts
+minLProp2 t (t':ts) =
+    minLProp2 t' ts ??
+    ()
 
+{-@ reflect minLProp3 @-}
 {-@ minLProp3 :: t:BiTree a -> {t':BiTree a | rank t < rank t'} 
             -> {ts':[BiTree a] | ordRankH (t':ts')} 
             -> {rank t < minL (t':ts')} @-}
@@ -286,6 +351,7 @@ minLProp3 t t' ts' =
     minLProp2 t (t':ts') ??
      ()
 
+{-@ reflect minLProp4 @-}
 {-@ minLProp4 :: t:BiTree a -> {ts:[BiTree a]| length ts > 0} 
             -> {minL (t:ts) == min (rank t) (minL ts) } @-}
 minLProp4 :: Eq a => BiTree a -> [BiTree a] -> Proof
@@ -308,12 +374,12 @@ unlist [t] = t
 singleton :: Ord a => a -> BiTree a
 singleton x = Node 0 x [] 1
 
---{-@ reflect insert @-}
+{-@ reflect insert @-}
 {-@ insert :: a -> Heap a -> Heap a @-}
 insert :: Ord a => a -> Heap a -> Heap a
 insert x (Heap ts) = Heap (insTree (singleton x) ts)
 
---{-@ reflect mergeTree @-}
+{-@ reflect mergeTree @-}
 {-@ mergeTree :: {ts1:[BiTree a] | ordRankH ts1} 
             -> {ts2:[BiTree a] | ordRankH ts2}
             -> {zs:[BiTree a] | length zs <= length ts1 + length ts2
@@ -323,7 +389,7 @@ insert x (Heap ts) = Heap (insTree (singleton x) ts)
                } @-}
 mergeTree :: Ord a => [BiTree a] -> [BiTree a] -> [BiTree a]
 mergeTree [] [] = []
-mergeTree ts1 [] = appProp ts1 ?? ts1
+mergeTree ts1 [] = ts1
 mergeTree [] ts2 = ts2
 mergeTree [t1] [t2]
     | rank t1 < rank t2 = t1 : [t2]
@@ -371,27 +437,50 @@ mergeTree ts1@(t1:ts1') ts2@(t2:ts2')
         (rank t1 < min (minL ts1') (minL ts2')) ??
         insTree (link t1 t2) (mergeTree ts1' ts2')
 
---{-@ reflect mergeHeap @-}
+{-@ reflect mergeHeap @-}
 mergeHeap :: Ord a => Heap a -> Heap a -> Heap a
 mergeHeap (Heap ts1) (Heap ts2) = Heap (mergeTree ts1 ts2)
 
-{-@ removeMinTree :: NEList (BiTree a) -> (BiTree a, [BiTree a]) @-}
+{-@ removeMinTree :: {ts:[BiTree a] | length ts > 0 && ordRankH ts} 
+            -> {tup:(t':BiTree a, {ts':[BiTree a] | 
+            length ts' == length ts - 1 &&
+            ordRankH ts' && 
+            (length ts' == 0 || (minL ts' >= minL ts))}) |
+            (length (snd tup) == 0 || (minL (snd tup) >= minL ts))} @-}
 removeMinTree :: Ord a => [BiTree a] -> (BiTree a, [BiTree a])
-removeMinTree [t] = (t,[])
+removeMinTree [t] =
+    ordRankH [] ??
+    (t,[])
+removeMinTree (t:[t'])
+    | root t < root t' = (t,[t'])
+    | otherwise =
+        ordRankH [t] ??
+        (minL [t] >= minL (t:[t'])) ?? 
+        (t',[t])
 removeMinTree (t:ts) =
     let (t', ts') = removeMinTree ts in
-    if root t < root t' then (t, ts) else (t', t:ts')
+    minLProp2 t ts ??
+    ordMinLProp t ts' ??
+    if root t < root t' 
+        then
+            (minL ts >= minL (t:ts)) ??
+            (t, ts) 
+        else
+            removeMinTree ts ??
+            (minL (t:ts') >= minL (t:ts)) ??
+            (t', t:ts')
 
 {-@ findMin :: NEHeap a -> a @-}
 findMin :: Ord a => Heap a -> a
 findMin (Heap ts) = 
     let (t, _) = removeMinTree ts in root t
-{-
+
 {-@ deleteMin :: NEHeap a -> Heap a @-}
 deleteMin :: Ord a => Heap a -> Heap a
 deleteMin (Heap ts) = let (Node _ x ts1 _, ts2) = removeMinTree ts in
-   Heap (mergeTree (reverse ts1) ts2)
--}
+    oRtoORHProp ts1 ??
+    Heap (mergeTree (reverse ts1) ts2)
+
 -- nodes t = 2^rank
 {-@ pow2Prop :: t:BiTree a -> {treeSize t == powerOfTwo (rank t)} @-}
 pow2Prop :: Ord a => BiTree a -> Proof
