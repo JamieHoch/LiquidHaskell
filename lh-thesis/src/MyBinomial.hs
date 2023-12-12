@@ -55,7 +55,7 @@ data BiTree a =
     deriving (Eq, Ord)
 
 {-@ measure length @-}
-{-@ length :: xs:[a] -> {v:Nat | v = length xs} @-}
+{-@ length :: xs:[a] -> {v:Nat | v = len xs} @-}
 length :: [a] -> Int
 length [] = 0
 length (x : xs) = 1 + length xs
@@ -72,12 +72,6 @@ ordRankH [] = True
 ordRankH [t] = True
 ordRankH (t:t':ts) = rank t < rank t' && ordRankH (t':ts)
 
-{-@ reflect ordRankHRel @-}
-ordRankHRel :: [BiTree a] -> Bool
-ordRankHRel [] = True
-ordRankHRel [t] = True
-ordRankHRel (t:t':ts) = rank t <= rank t' && ordRankHRel (t':ts)
-
 {-@ reflect sorted @-}
 sorted :: Ord a => a -> [BiTree a] -> Bool
 sorted x [] = True
@@ -92,16 +86,11 @@ getRank t = rank t
 {-@ head :: {t:[a] | length t > 0} -> a @-}
 head (t:ts) = t
 
-{-@ reflect last @-}
-{-@ last :: {t:[a] | length t > 0} -> a @-}
-last [t] = t
-last (t:ts) = last ts
-
-{-@ reflect begin @-}
-{-@ begin :: {ts:[a] | length ts > 0} -> {vs:[a] | length vs < length ts} @-}
-begin :: [a] -> [a]
-begin [t] = []
-begin (t:ts) = t : begin ts
+{-@ reflect min @-}
+min :: Ord a => a -> a -> a
+min x1 x2
+    | x1 <= x2 = x1
+    | otherwise = x2
 
 {-@ reflect link @-}
 {-@ link :: t1:BiTree a -> {t2:BiTree a | rank t2 = rank t1} 
@@ -119,11 +108,47 @@ link t1@(Node r1 x1 ts1 sz1) t2@(Node _ x2 ts2 sz2)
         sortedProp t2 t1 ??
         Node (r1 + 1) x2 (t1:ts2) (sz1 + sz2)
 
-{-@ reflect min @-}
-min :: Ord a => a -> a -> a
-min x1 x2
-    | x1 <= x2 = x1
-    | otherwise = x2
+{-@ reflect ordRankProp @-}
+{-@ ordRankProp :: r:Nat -> {t:BiTree a | r == rank t} 
+            -> {ts:[BiTree a] | (r == 0 && length ts == 0 || r == getRank (head ts) + 1) && ordRank ts}
+            -> {ordRank (t:ts)} @-}
+ordRankProp :: Int -> BiTree a -> [BiTree a] -> Proof
+ordRankProp r t [] = ()
+ordRankProp r t (t':ts) = ()
+
+{-@ reflect sortedProp @-}
+{-@ sortedProp :: t1:BiTree a -> {t2:BiTree a | root t1 <= root t2} 
+            -> {sorted (root t1) (t2:subtrees t1)} @-}
+sortedProp :: BiTree a -> BiTree a -> Proof
+sortedProp t1@(Node _ x [] _) t2 = ()
+sortedProp t1 t2 = ()
+
+{-@ infix   ++ @-}
+{-@ reflect ++ @-}
+{-@ (++) :: xs:[a] -> ys:[a] -> {zs:[a] | length zs == length xs + length ys} @-}
+(++) :: Eq a => [a] -> [a] -> [a]
+[]     ++ ys = ys
+(x:xs) ++ ys = x:(xs ++ ys)
+
+
+{-@ reflect last @-}
+{-@ last :: {t:[a] | length t > 0} -> a @-}
+last [t] = t
+last (t:ts) = last ts
+
+{-@ reflect begin @-}
+{-@ begin :: {ts:[a] | length ts > 0} -> {vs:[a] | length vs == length ts - 1} @-}
+begin :: [a] -> [a]
+begin [t] = []
+begin (t:ts) = t : begin ts
+
+{-@ beginLastProp :: {ts:[BiTree a] | length ts > 0} 
+            -> {begin ts ++ [last ts] == ts} @-}
+beginLastProp :: Ord a => [BiTree a] -> Proof
+beginLastProp [t] = ()
+beginLastProp (t:ts) =
+    beginLastProp ts ??
+    () 
 
 {-@ reflect max @-}
 max :: Ord a => a -> a -> a
@@ -147,19 +172,6 @@ minL (t:ts)
     | rank t < minL ts = rank t
     | otherwise = minL ts
 
-{-@ infix   ++ @-}
-{-@ reflect ++ @-}
-{-@ (++) :: xs:[a] -> ys:[a] -> {zs:[a] | length zs == length xs + length ys} @-}
-(++) :: Eq a => [a] -> [a] -> [a]
-[]     ++ ys = ys
-(x:xs) ++ ys = x:(xs ++ ys)
-
-{-@ reflect sortedProp @-}
-{-@ sortedProp :: t1:BiTree a -> {t2:BiTree a | root t1 <= root t2} 
-            -> {sorted (root t1) (t2:subtrees t1)} @-}
-sortedProp :: BiTree a -> BiTree a -> Proof
-sortedProp t1@(Node _ x [] _) t2 = ()
-sortedProp t1 t2 = ()
 
 {-@ oRtoORHProp :: {ts:[BiTree a] | ordRank ts} -> {ordRankH (reverse ts)} @-}
 oRtoORHProp :: Eq a => [BiTree a] -> Proof
@@ -242,14 +254,6 @@ rev :: [a] -> [a] -> [a]
 rev [] ys = ys
 rev (x:xs) ys = rev xs (x:ys)
 
-{-@ reflect ordRankProp @-}
-{-@ ordRankProp :: r:Nat -> {t:BiTree a | r == rank t} 
-            -> {ts:[BiTree a] | (r == 0 && length ts == 0 || r == getRank (head ts) + 1) && ordRank ts}
-            -> {ordRank (t:ts)} @-}
-ordRankProp :: Int -> BiTree a -> [BiTree a] -> Proof
-ordRankProp r t [] = ()
-ordRankProp r t (t':ts) = ()
-
 {-@ reflect ordRankPropH @-}
 {-@ ordRankPropH :: t:BiTree a 
             -> {ts:[BiTree a] | ordRankH ts && (length ts == 0 || rank t < getRank (head ts))}
@@ -275,6 +279,48 @@ minLOrdProp (t:t':ts) =
 ordRankPropH2 :: BiTree a -> [BiTree a] -> Proof
 ordRankPropH2 t [] = ()
 ordRankPropH2 t (t':ts) = ()
+
+-- t:BiTree a -> ts: ordRankH (ts++t) -> ordRankH ts
+{-@ ordRankBegin :: {ts:[BiTree a] | ordRankH ts && length ts > 0}
+            -> {ordRankH (begin ts)} @-}
+ordRankBegin :: (Eq a, Ord a) => [BiTree a] -> Proof
+ordRankBegin [t] = ()
+ordRankBegin (t:[t']) = () 
+ordRankBegin (t:t':ts) =
+    ordRankBegin (t':ts) ??
+    ordRankH (begin (t':ts)) ??
+    ordRankPropH t (begin (t':ts)) ??
+    ()
+
+{-@ maxBeginLastProp :: {ts:[BiTree a] | ordRankH ts && length ts > 1}
+            -> {maxL (begin ts) < rank (last ts)} @-}
+maxBeginLastProp :: Eq a => [BiTree a] -> Proof
+maxBeginLastProp (t:[t']) = ()
+maxBeginLastProp (t:t':ts) =
+    rankMaxLProp t t' ts ??
+    maxBeginLastProp (t':ts) ??
+    (maxL (begin (t':ts)) < rank (last ts))??
+    ()
+
+{-@ lastMaxLProp :: {ts:[BiTree a] | ordRankH ts && length ts > 0}
+        -> {maxL ts == rank (last ts)} @-}
+lastMaxLProp :: Eq a => [BiTree a] -> Proof
+lastMaxLProp [t] = ()
+lastMaxLProp (t:t':ts)
+    | rank t >= rank t' = ()
+    | otherwise =
+        rankMaxLProp t t' ts ??
+        lastMaxLProp (t':ts) ?? 
+        () 
+
+{-@ rankMaxLProp :: t:BiTree a -> {t':BiTree a | rank t < rank t'} -> ts:[BiTree a]
+            -> {rank t < maxL (t':ts)} @-}
+rankMaxLProp :: Eq a => BiTree a -> BiTree a -> [BiTree a] -> Proof
+rankMaxLProp t t' [] = ()
+rankMaxLProp t t' ts
+    | rank t' > maxL ts = ()
+    | otherwise = ()
+
 
 {-@ reflect insTree @-}
 {-@ insTree :: t:BiTree a -> {ts:[BiTree a] | ordRankH ts} 
@@ -481,6 +527,7 @@ deleteMin (Heap ts) = let (Node _ x ts1 _, ts2) = removeMinTree ts in
     oRtoORHProp ts1 ??
     Heap (mergeTree (reverse ts1) ts2)
 
+
 -- nodes t = 2^rank
 {-@ pow2Prop :: t:BiTree a -> {treeSize t == powerOfTwo (rank t)} @-}
 pow2Prop :: Ord a => BiTree a -> Proof
@@ -514,9 +561,15 @@ powerOfTwo :: Int -> Int
 powerOfTwo 0 = 1
 powerOfTwo n = 2 * (powerOfTwo (n - 1))
 
+{-@ reflect log2 @-}
+{-@ log2 :: n:Pos -> v:Nat / [n]@-}
+log2 :: Int -> Int
+log2 1 = 0
+log2 n = 1 + log2 (div n 2)
+
 -- nodes ts = sum 2^rank_i
 {-@ reflect sumRank @-}
-{-@ sumRank :: [BiTree a] -> Nat @-}
+{-@ sumRank :: ts:[BiTree a] -> {v:Nat | v >= length ts} @-}
 sumRank :: Ord a => [BiTree a] -> Int
 sumRank [] = 0
 sumRank (t:ts) = powerOfTwo (rank t) + sumRank ts
@@ -529,10 +582,71 @@ sumRankProp (t:ts) =
     sumRankProp ts ??
     ()
 
--- sum 2^rank_i >= 2^rank_n 
+{-@ logPowP :: n:Nat -> {log2 (powerOfTwo n) == n} @-}
+logPowP :: Int -> Proof
+logPowP 0 = ()
+logPowP n = logPowP (n-1) ?? ()
+
+{-@ logAddProp :: x:Pos -> {log2 (2 * powerOfTwo x) = 1 + x} @-}
+logAddProp :: Int -> Proof
+logAddProp 1 = ()
+logAddProp x = logPowP x ?? ()
+
+-- sum 2^rank_i >= 2^rank_n
+-- deprecated
 {-@ firstProp :: t:BiTree a -> ts:[BiTree a] -> {sumRank (t:ts) >= powerOfTwo (rank t)} @-}
 firstProp :: Ord a => BiTree a -> [BiTree a] -> Proof
 firstProp t ts = (sumRank ts >= 0) ?? ()
+
+{-@ firstProp1 :: {ts:[BiTree a] | length ts > 0} 
+        -> {powerOfTwo (rank (last ts)) <= sumRank ts} @-}
+firstProp1 :: Ord a => [BiTree a] -> Proof
+firstProp1 [t] = ()
+firstProp1 (t:ts) =
+    firstProp1 ts ??
+    (0 <= powerOfTwo (rank t)) ??
+    ()
+
+{-@ logMon :: x:Pos -> {y:Pos | x <= y} -> {log2 x <= log2 y} @-}
+logMon :: Int -> Int -> Proof
+logMon x 1 = ()
+logMon 1 y = (0 <= log2 y) ?? ()
+logMon x y =
+    logMon (div x 2) (div y 2) ??
+    ()
+
+-- length ts <= rank + 1
+{-@ secondProp :: {ts:[BiTree a] | ordRankH ts && length ts > 0} 
+            -> {length ts <= maxL ts + 1} @-}
+secondProp :: Ord a => [BiTree a] -> Proof
+secondProp [t] = (1 <= rank t + 1) ?? ()
+secondProp (t:[t2]) =
+    secondProp [t] ??
+    ()
+secondProp ts =
+    ordRankBegin ts ??
+    secondProp (begin ts) ??
+    beginLastProp ts ??
+    maxBeginLastProp ts ??
+    maxLApp (begin ts) [last ts] ??
+    (length ts <= rank (last ts) + 1) ??
+    ()
+
+{-@ finalProp :: {ts:[BiTree a] | ordRankH ts} 
+            -> {length ts <= 1 + log2 (treeListSize ts)} @-}
+finalProp :: (Eq a, Ord a) => [BiTree a] -> Proof
+finalProp [] = ()
+finalProp [t] = (1 <= 1 + log2 (treeSize t)) ?? () 
+finalProp ts =
+    lastMaxLProp ts ??
+    secondProp ts ??
+    logPowP (rank (last ts) + 1) ??
+    logAddProp (rank (last ts)) ??
+    logPowP (rank (last ts)) ??
+    firstProp1 ts ??
+    logMon (powerOfTwo (rank (last ts))) (sumRank ts) ??
+    sumRankProp ts ??
+    ()
 
 
 --LEBENSRETTER zum Debuggen
