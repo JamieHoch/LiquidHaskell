@@ -7,8 +7,7 @@ module MyBinomial
     ( link
     , insTree
     , insert
-    , mergeTree
-    , mergeHeap
+    , merge
     , removeMinTree
     , findMin
     , deleteMin
@@ -174,39 +173,35 @@ insert :: Ord a => a -> [BiTree a] -> [BiTree a]
 insert x ts = insTree (singleton x) ts
 
 
-{-@ reflect mergeTree @-}
-{-@ mergeTree :: ts1:Heap a -> ts2:Heap a
+{-@ reflect merge @-}
+{-@ merge :: ts1:Heap a -> ts2:Heap a
             -> {zs:Heap a | length zs <= length ts1 + length ts2
                && (length ts1 == 0 || length ts2 == 0 || 
                (length zs > 0 && (rank (head zs) >= rank (head ts1) || rank (head zs) >= rank (head ts2))))
                } @-}
-mergeTree :: Ord a => [BiTree a] -> [BiTree a] -> [BiTree a]
-mergeTree ts1 [] = ts1
-mergeTree [] ts2 = ts2
-mergeTree [t1] [t2]
+merge :: Ord a => [BiTree a] -> [BiTree a] -> [BiTree a]
+merge ts1 [] = ts1
+merge [] ts2 = ts2
+merge [t1] [t2]
     | rank t1 < rank t2 = t1 : [t2]
     | rank t2 < rank t1 = t2 : [t1]
     | otherwise = [link t1 t2]
-mergeTree ts1@(t1:ts1') [t2]
+merge ts1@(t1:ts1') [t2]
     | rank t1 < rank t2 =
-        ordRankHProp t1 (mergeTree ts1' [t2]) ??
-        t1 : mergeTree ts1' [t2]
+        ordRankHProp t1 (merge ts1' [t2]) ??
+        t1 : merge ts1' [t2]
     | rank t2 < rank t1 = t2 : ts1
     | otherwise = insTree (link t1 t2) ts1'
-mergeTree ts1@(t1:ts1') ts2@(t2:ts2')
+merge ts1@(t1:ts1') ts2@(t2:ts2')
     | rank t1 < rank t2 =
-        ordRankHProp t1 (mergeTree ts1' ts2) ??
-        t1 : mergeTree ts1' ts2
+        ordRankHProp t1 (merge ts1' ts2) ??
+        t1 : merge ts1' ts2
     | rank t2 < rank t1 =
-        ordRankHProp t2 (mergeTree ts1 ts2') ??
-        t2 : mergeTree ts1 ts2'
+        ordRankHProp t2 (merge ts1 ts2') ??
+        t2 : merge ts1 ts2'
     | otherwise =
-        insTree (link t1 t2) (mergeTree ts1' ts2')
+        insTree (link t1 t2) (merge ts1' ts2')
 
-{-@ reflect mergeHeap @-}
-{-@ mergeHeap :: Heap a -> Heap a -> Heap a @-}
-mergeHeap :: Ord a => [BiTree a] -> [BiTree a] -> [BiTree a]
-mergeHeap ts1 ts2 = mergeTree ts1 ts2
 
 {-@ reflect removeMinTree @-}
 {-@ removeMinTree :: ts:NEHeap a 
@@ -244,7 +239,7 @@ findMin ts =
 deleteMin :: Ord a => [BiTree a] -> [BiTree a]
 deleteMin ts = let (Node _ x ts1 _, ts2) = removeMinTree ts in
     oRtoORHProp ts1 ??
-    mergeTree (reverse ts1) ts2
+    merge (reverse ts1) ts2
 
 
 ---------------------------------------------------------------
