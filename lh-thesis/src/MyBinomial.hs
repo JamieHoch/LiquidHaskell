@@ -277,14 +277,6 @@ sortedProp :: BiTree a -> BiTree a -> Proof
 sortedProp t1@(Node _ x [] _) t2 = ()
 sortedProp t1 t2 = ()
 
-{-@ beginLastProp :: ts:NEBiTreeL a
-            -> {begin ts ++ [last ts] == ts} @-}
-beginLastProp :: Ord a => [BiTree a] -> Proof
-beginLastProp [t] = ()
-beginLastProp (t:ts) =
-    beginLastProp ts ??
-    () 
-
 {-@ reflect oRtoORHProp @-}
 {-@ oRtoORHProp :: {ts:[BiTree a] | ordRank ts} -> {ordRankH (reverse ts)} @-}
 oRtoORHProp :: Eq a => [BiTree a] -> Proof
