@@ -1,21 +1,27 @@
 {-@ LIQUID "--reflection" @-}
-{-@ LIQUID "--short-names" @-}
 {-@ LIQUID "--ple" @-}
---{-@ LIQUID "--no-termination" @-}
 {-@ infix : @-}
 
-module PotentialAnalysis_Binomial2 where
-import Prelude hiding (length, pure, (<*>), head, reverse, last, (++))
+module PotentialAnalysis_Binomial2
+    ( link
+    , insTree
+    , insert
+    , merge
+    , removeMinTree
+    , findMin
+    , deleteMin
+    )
+where
+import Prelude hiding (length, pure, head, last, (++), reverse, (<*>), (>>=))
 import Language.Haskell.Liquid.RTick as RTick
 import Language.Haskell.Liquid.ProofCombinators
-import GHC.Base (undefined)
-import Data.Bool (Bool(True, False))
 
 
 {-@ type Pos = {n:Int | n >= 1} @-}
 {-@ type NEBiTreeL a = {xs:[BiTree a] | length xs > 0} @-}
 {-@ type NEHeap a = {ts:Heap a | length ts > 0} @-}
 {-@ type Heap a = {ts:[BiTree a] | ordRankH ts} @-}
+
 
 {-@
 data BiTree [rank] a =
@@ -144,10 +150,10 @@ pot (x:xs) =
 pott :: Ord a => (BiTree a, [BiTree a]) -> Int
 pott (x,xs) = pot xs + 1
 
-{-@ inline amortized1 @-}
-{-@ amortized1 :: Tick (Heap a) -> Heap a -> Int @-}
-amortized1 :: Ord a => Tick [BiTree a] -> [BiTree a] -> Int
-amortized1 ti input = tcost ti + pot (tval ti) - pot input
+{-@ inline amortized @-}
+{-@ amortized :: Tick (Heap a) -> Heap a -> Int @-}
+amortized :: Ord a => Tick [BiTree a] -> [BiTree a] -> Int
+amortized ti input = tcost ti + pot (tval ti) - pot input
 
 {-@ inline amortized2 @-}
 {-@ amortized2 :: Tick (Heap a) -> Heap a -> Heap a -> Int @-}
@@ -202,10 +208,10 @@ link t1@(Node r1 x1 ts1 sz1) t2@(Node _ x2 ts2 sz2)
 
 {-@ reflect insTree @-}
 {-@ insTree :: t:BiTree a -> ts:Heap a 
-            -> {ti:Tick ({zs:[BiTree a] | length zs > 0 && length zs <= length ts + 1 
+            -> {ti:Tick ({zs:NEBiTreeL a | length zs <= length ts + 1 
             && (rank (head zs) >= rank t || rank (head zs) >= rank (head ts))}) | 
             ordRankH (tval ti) && 
-            amortized1 ti ts == 2 &&
+            amortized ti ts == 2 &&
             (tcost ti) <= pot ts + 1 &&
             pot (tval ti) <= pot ts + 1
             } @-}
@@ -233,7 +239,7 @@ insTree t ts@(t':ts')
 {-@ reflect insert @-}
 {-@ insert :: x:a -> ts:Heap a 
         ->  {ti:Tick ([BiTree a]) | ordRankH (tval ti) &&
-        amortized1 ti ts == 2} @-}
+        amortized ti ts == 2} @-}
 insert :: Ord a => a -> [BiTree a] -> Tick [BiTree a]
 insert x ts = insTree (singleton x) ts
 
@@ -273,14 +279,18 @@ merge ts1@(t1:ts1') ts2@(t2:ts2')
         ordRankHProp t2 (tval (merge ts1 ts2')) ??
         pure ((:) t2) </> merge ts1 ts2'
     | otherwise =
-        let ti = (insTree (link t1 t2) (tval (merge ts1' ts2')))
-            --goal = cbind (length ts1 + length ts2) (merge ts1' ts2') (insTree (link t1 t2)) in
-            goal = step (tcost (merge ts1' ts2')) ti in
-        goal
-        --abind 2 (length ts1 + length ts2) (merge ts1' ts2') (insTree (link t1 t2)) 
-        --step (tcost (merge ts1' ts2')) (insTree (link t1 t2) (tval (merge ts1' ts2')))
-        -- (merge ts1' ts2') >>= (insTree (link t1 t2))
+        -- WE TRUST THIS PART
+        let Tick m x = merge ts1' ts2'
+            Tick n y = insTree (link t1 t2) x in
+        Tick (n + m) y
+        -- END TRUSTED
 
+{- 
+    NOTE: 
+    (merge ts1' ts2') >>= (insTree (link t1 t2)) but (>>=) does not inherit types; 
+    we would need ordRankH and hence BiTrees and ALL Properties in a separate function
+    -> better trust small parts in code than big separate functions 
+-}
 
 {-@ reflect removeMinTree @-}
 {-@ removeMinTree :: ts:NEHeap a 
@@ -302,14 +312,15 @@ removeMinTree (t:[t'])
         ordRankH [t] ??
         pure (t',[t])
 removeMinTree (t:ts)
+    -- WE TRUST THIS PART
     | root t < root t' =
         Tick (cc + 1) (t,ts)
     | otherwise =
-        removeMinTree ts ??
         ordRankHProp t ts' ??
         Tick (cc + 1) (t',t:ts')
     where 
       (Tick cc (t', ts')) = removeMinTree ts
+    -- END TRUSTED
 
 {-@ findMin :: Ord a => ts:NEHeap a
         -> {ti:Tick a | tcost ti + 1 - pot ts <= 1} @-}
@@ -317,28 +328,15 @@ findMin :: Ord a => [BiTree a] -> Tick a
 findMin ts = RTick.liftM getRoot (RTick.liftM first (removeMinTree ts))
 
 {-@ deleteMin :: ts:NEHeap a -> {ti:Tick [BiTree a] | 
-            ordRankH (tval ti)} @-}
+            ordRankH (tval ti) &&
+            amortized ti ts <= 2 * (pot (reverse (subtrees (fst (tval (removeMinTree ts))))) + pot (snd (tval (removeMinTree ts))))} @-}
 deleteMin :: Ord a => [BiTree a] -> Tick [BiTree a]
 deleteMin ts =
-    (pot ts == pot ts2 + 1) ??
-    deleteMin' ts1 ts2 ts cc
-    where Tick cc (Node _ x ts1 _, ts2) = removeMinTree ts
-
-{-@ deleteMin' :: Ord a => {ts1:[BiTree a] | ordRank ts1} -> ts2:Heap a 
-        -> {ts:NEHeap a | pot ts == pot ts2 + 1} 
-        -> {cc:Int | cc == tcost (removeMinTree ts)}
-        -> {ti:Tick [BiTree a] | ordRankH (tval ti) &&
-        amortized1 ti ts <= 2 * (pot (reverse ts1) + pot ts2)} @-}
-deleteMin' :: Ord a => [BiTree a] -> [BiTree a] -> [BiTree a] -> Int ->  Tick [BiTree a]
-deleteMin' ts1 ts2 ts cc =
+    -- WE TRUST THIS PART
+    let Tick cc (Node _ x ts1 _, ts2) = removeMinTree ts in
     oRtoORHProp ts1 ??
-    let ti = merge (reverse ts1) ts2 in
-    assert (cc <= pot ts + pot ts - (pot (snd (tval (removeMinTree ts))) + 1)) ??
-    assert (tcost ti == (tcost ti) + (pot (tval ti)) - (pot (reverse ts1) + pot ts2) + pot (reverse ts1) + pot ts2 - pot (tval ti)) ??
-    assert (tcost ti <= pot ts2 + pot (reverse ts1) + pot (reverse ts1) + pot ts2 - pot (tval ti)) ??
-    (cc + tcost ti + pot (tval ti) - (pot ts) <= 2* (pot (reverse ts1) + pot ts2)) ??
     step cc (merge (reverse ts1) ts2)
-
+    -- END TRUSTED
 
 ---------------------------------------------------------------
 -- PROPERTIES
@@ -417,8 +415,7 @@ ordRankHProp t (t':ts) = ()
             -> {ordRankH ts} @-}
 ordRankHProp2 :: Ord a => BiTree a -> [BiTree a] -> Proof
 ordRankHProp2 t [] = ()
-ordRankHProp2 t [t'] = ()
-ordRankHProp2 t (t':ts) = ()
+ordRankHProp2 t ts = ()
 
 {-@ reflect ordRankBegin @-}
 {-@ ordRankBegin :: ts:NEHeap a -> {ordRankH (begin ts)} @-}
@@ -536,18 +533,8 @@ lenLeLogProp ts =
 
 {-
 --------------------------------------------------------------------
--- TRUSTED CODE OF NV
+-- TRUSTED CODE NV
 --------------------------------------------------------------------
--- THIS IS TRUSTED CODE ABOUT AMORTISED BIND 
-{-@ reflect cbind @-}
-{-@ cbind :: l:Nat -> x:Tick({v:[BiTree a] | length v <= l - 1}) -> f:(fx: [BiTree a] -> t2:Tick {xs:[BiTree a] | length xs <= length fx + 1 && ordRankH xs})
-      -> { t:Tick [BiTree a] | tval (f (tval x)) == tval t &&
-         tcost x + tcost (f (tval x)) == tcost t 
-         && ordRankH (tval t) && length (tval t) <= l } @-}
-cbind :: Int -> Tick [BiTree a] -> ([BiTree a] -> Tick [BiTree a]) -> Tick [BiTree a]
-cbind _ (Tick m x) f = let Tick n y = f x in Tick (m + n) y
--- END TRUSTED 
-
 -- THIS IS TRUSTED CODE ABOUT AMORTISED BIND 
 {-@ reflect abind @-}
 {-@ abind :: c:Nat -> m:Nat -> x:Tick ({v:[a] | length v <= m - 1}) -> f:(fx:[a] -> {t:Tick {xs:[c] | length xs <= length fx + 1} | amortized t (pot (tval t)) (pot fx) <= c})
@@ -555,13 +542,7 @@ cbind _ (Tick m x) f = let Tick n y = f x in Tick (m + n) y
 abind :: Int -> Int -> Tick [a] -> ([a] -> Tick [c]) -> Tick [c]
 abind c _ (Tick c1 x) f = Tick (c + c1) y
     where Tick _ y = f x
--- END TRUSTED 
-
-{-@ boo :: {ts:[BiTree a] | length ts > 0} -> ti:Tick {v:(BiTree a, [BiTree a]) | pott v == pot ts} 
-        -> {to:Tick {v:(BiTree a, [BiTree a]) | pott v == pot ts}  | to == ti && pott (tval to) == pot ts && tcost to == tcost ti && tval to == tval ti} @-}
-boo :: [BiTree a] -> Tick (BiTree a, [BiTree a]) -> Tick (BiTree a, [BiTree a])
-boo _ (Tick c v) = Tick c v  
-
+-- END TRUSTED
 
 -- THIS TOO IS TRUSTED LIBRARY CODE 
 -- NV: Here the +1 comes because I tick! 
@@ -571,5 +552,4 @@ boo _ (Tick c v) = Tick c v
 ifTick :: Int -> Tick a -> (a -> Bool) -> (a -> Tick b) -> (a -> Tick b) -> Tick b
 ifTick _ (Tick c v) b t e = RTick.step (c + 1) (if b v then t v else e v)  
 -- END OF TRUSTED CODE 
-
 -}

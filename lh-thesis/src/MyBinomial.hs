@@ -13,7 +13,7 @@ module MyBinomial
     , deleteMin
     )
 where
-import Prelude hiding (length, head, min, last, (++), reverse)
+import Prelude hiding (length, head, last, (++), reverse)
 import Language.Haskell.Liquid.ProofCombinators
 import GHC.Base (undefined)
 
