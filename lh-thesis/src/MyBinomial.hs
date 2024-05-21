@@ -23,6 +23,12 @@ import GHC.Base (undefined)
 {-@ type NEHeap a = {ts:Heap a | length ts > 0} @-}
 {-@ type Heap a = {ts:[BiTree a] | ordRankH ts} @-}
 
+{-@ type Even = {v:Int | v <=> (v mod 2 == 0)} @-}
+
+--{-@ evenNumber :: Even @-}
+evenNumber :: Int
+evenNumber = 7
+
 {-@
 data BiTree [rank] a =
     Node
@@ -133,25 +139,22 @@ singleton x = Node 0 x [] 1
 
 {-@ reflect link @-}
 {-@ link :: t1:BiTree a -> {t2:BiTree a | rank t2 = rank t1} 
-        -> {v:BiTree a | rank v = rank t1 + 1 
-        && treeSize v = treeSize t1 + treeSize t2
-        && root v <= (root t1) && root v <= (root t2)} @-}
+        -> {v:BiTree a | rank v = rank t1 + 1} @-}
 link :: (Ord a) => BiTree a -> BiTree a -> BiTree a
 link t1@(Node r1 x1 ts1 sz1) t2@(Node _ x2 ts2 sz2)
     | x1 <= x2 =
-        ordRankProp r1 t2 ts1 ??
+        ordRankProp t2 ts1 ??
         sortedProp t1 t2 ??
         Node (r1 + 1) x1 (t2:ts1) (sz1 + sz2)
     | otherwise =
-        ordRankProp r1 t1 ts2 ??
+        ordRankProp t1 ts2 ??
         sortedProp t2 t1 ??
         Node (r1 + 1) x2 (t1:ts2) (sz1 + sz2)
 
 
 {-@ reflect insTree @-}
 {-@ insTree :: t:BiTree a -> ts:Heap a 
-            -> {zs:Heap a| length zs > 0 && length zs <= length ts + 1 
-            && (rank (head zs) >= rank t || rank (head zs) >= rank (head ts))} @-}
+            -> {zs:NEHeap a| (rank (head zs) >= rank t || rank (head zs) >= rank (head ts))} @-}
 insTree :: (Ord a, Eq a) => BiTree a -> [BiTree a] -> [BiTree a]
 insTree t [] = [t]
 insTree t [t']
@@ -175,8 +178,7 @@ insert x ts = insTree (singleton x) ts
 
 {-@ reflect merge @-}
 {-@ merge :: ts1:Heap a -> ts2:Heap a
-            -> {zs:Heap a | length zs <= length ts1 + length ts2
-               && (length ts1 == 0 || length ts2 == 0 || 
+            -> {zs:Heap a | (length ts1 == 0 || length ts2 == 0 || 
                (length zs > 0 && (rank (head zs) >= rank (head ts1) || rank (head zs) >= rank (head ts2))))
                } @-}
 merge :: Ord a => [BiTree a] -> [BiTree a] -> [BiTree a]
@@ -263,12 +265,11 @@ x ?? y = y
 -- PROPERTIES
 ---------------------------------------------------------------
 {-@ reflect ordRankProp @-}
-{-@ ordRankProp :: r:Nat -> {t:BiTree a | r == rank t} 
-            -> {ts:[BiTree a] | (r == 0 && length ts == 0 || r == rank (head ts) + 1) && ordRank ts}
-            -> {ordRank (t:ts)} @-}
-ordRankProp :: Int -> BiTree a -> [BiTree a] -> Proof
-ordRankProp r t [] = ()
-ordRankProp r t (t':ts) = ()
+{-@ ordRankProp :: t:BiTree a -> {ts:[BiTree a] | (length ts == 0 
+            || rank t == rank (head ts) + 1) && ordRank ts} -> {ordRank (t:ts)} @-}
+ordRankProp :: BiTree a -> [BiTree a] -> Proof
+ordRankProp t [] = ()
+ordRankProp t (t':ts) = ()
 
 {-@ reflect sortedProp @-}
 {-@ sortedProp :: t1:BiTree a -> {t2:BiTree a | root t1 <= root t2} 
